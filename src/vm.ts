@@ -13,7 +13,8 @@ export default class VirtualMachine {
 
     constructor (
         private codes: (OpCode | Value)[] = [],
-        private values: Value[] = []
+        private values: Value[] = [],
+        private cur: number = codes.length - 1
     ) {
 
     }
@@ -25,15 +26,15 @@ export default class VirtualMachine {
     }
 
     private popCode () {
-        const code = this.codes.pop()
+        const code = this.codes[this.cur--]
         if (!code) throw new Error('no code')
         return code
     }
 
     exec () {
         const { codes, stack  } = this
-        main: while (codes.length) {
-            const op = codes.pop()
+        main: while (this.cur >= 0) {
+            const op = codes[this.cur--]
             switch (op) {
                 case OpCode.Load:
                     stack.push(this.values[assertValue(this.popCode()).value])
@@ -54,6 +55,26 @@ export default class VirtualMachine {
                     const right = this.popStack()
                     const left = this.popStack()
                     stack.push({ value: left.value * right.value });
+                    break;
+                }
+                case OpCode.Div: {
+                    const right = this.popStack()
+                    const left = this.popStack()
+                    stack.push({ value: left.value / right.value });
+                    break;
+                }
+                    
+                case OpCode.Jump: {
+                    this.cur = assertValue(this.popCode()).value
+                    break;
+                }
+                    
+                case OpCode.JumpIfFalse: {
+                    const cond = this.popStack()
+                    const pos = assertValue(this.popCode()).value
+                    if (!cond.value) {
+                        this.cur = pos
+                    }
                     break;
                 }
                 case OpCode.Eof:

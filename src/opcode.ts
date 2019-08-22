@@ -3,5 +3,10 @@ export enum OpCode {
     Load,
     Add,
     Sub,
-    Mul
+    Mul,
+    Div,
+
+
+    Jump,
+    JumpIfFalse,
 }
