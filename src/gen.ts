@@ -2,8 +2,8 @@ import * as ts from 'typescript'
 import { OpCode } from './opcode';
 import { Value } from './value';
 
-export function gen(code: string): [OpCode[], Value[]] {
-    const op: OpCode[] = [OpCode.Eof]
+export function gen(code: string): [(OpCode | Value)[], Value[]] {
+    const op: (OpCode | Value)[] = [OpCode.Eof]
     const value: Value[] = []
 
     ts.forEachChild(ts.createSourceFile('', code, ts.ScriptTarget.Latest), visitor)
@@ -13,8 +13,9 @@ export function gen(code: string): [OpCode[], Value[]] {
     function visitor (node: ts.Node) {
         switch (node.kind) {
             case ts.SyntaxKind.NumericLiteral:
-                op.push(OpCode.Push)
                 value.push({ value: +(<ts.NumericLiteral>node).text})
+                op.push({ value: value.length - 1 })
+                op.push(OpCode.Load)
                 break;
             case ts.SyntaxKind.BinaryExpression:
                 const binary = node as ts.BinaryExpression

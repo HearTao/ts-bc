@@ -1,6 +1,6 @@
 export enum OpCode {
     Eof,
-    Push,
+    Load,
     Add,
     Sub,
     Mul
