@@ -1,4 +1,17 @@
+<br/>
+
+<div align=center>
+
 # ts-bc
+
+__
+
+_`npm i -D ts-bc`_
+
+</div>
+
+<br />
+
 
 ## Architecture
 
