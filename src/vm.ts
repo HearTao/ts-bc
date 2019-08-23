@@ -1,11 +1,14 @@
 import { OpCode } from './opcode'
 import { Value } from './value'
 import { assertValue, assertNumberValue, assertStringValue } from './utils'
-import { VMDump, DoneResult, ExecResult } from './types'
+import { VMDump, DoneResult, ExecResult, Environment, EnvironmentType } from './types'
 
 export default class VirtualMachine {
   private stack: Value[] = []
-  private environments: Map<string, Value>[] = [new Map()]
+  private environments: Environment[] = [{
+      type: EnvironmentType.global,
+      valueTable: new Map()
+  }]
 
   constructor(
     private codes: (OpCode | Value)[] = [],
@@ -25,10 +28,29 @@ export default class VirtualMachine {
     return assertValue(code)
   }
 
-  private currentEnv() {
-    const env = this.environments[this.environments.length - 1]
-    if (!env) throw new Error('no env')
-    return env
+  private lookup(name: string) {
+    for (let i = this.environments.length - 1; i >= 0; i--) {
+        const env = this.environments[i]
+        if (env.valueTable.has(name)) {
+            return env.valueTable.get(name)!
+        }
+    }
+    throw new Error('cannot find name ' + name)
+  }
+
+  private define (name: string, value: Value) {
+    this.environments[this.environments.length - 1].valueTable.set(name, value)
+  }
+
+  private setValue(name: string, value: Value) {
+    for (let i = this.environments.length - 1; i >= 0; i--) {
+        const env = this.environments[i]
+        if (env.valueTable.has(name)) {
+            env.valueTable.set(name, value)
+            return;
+        }
+    }
+    throw new Error('cannot find name ' + name)
   }
 
   dump(): VMDump {
@@ -132,30 +154,33 @@ export default class VirtualMachine {
         case OpCode.Def: {
           const initializer = this.popStack()
           const name = this.popStack()
-          const env = this.currentEnv()
-          env.set(assertStringValue(name), initializer)
+          this.define(assertStringValue(name), initializer)
           break
         }
         case OpCode.Load: {
           const name = this.popStack()
-          const env = this.currentEnv()
-          const value = env.get(assertStringValue(name))
-          if (!value) {
-            throw new Error('unknown id: ' + name)
-          }
+          const value = this.lookup(assertStringValue(name))
           stack.push(value)
           break
         }
         case OpCode.Set: {
           const name = this.popStack()
           const value = this.popStack()
-          const env = this.currentEnv()
-          const nameText = assertStringValue(name)
-          if (!env.has(nameText)) {
-            throw new Error('cannot find: ' + nameText)
-          }
-          env.set(nameText, value)
+          this.setValue(assertStringValue(name), value)
           break
+        }
+
+        case OpCode.EnterBlockScope: {
+            this.environments.push({
+                type: EnvironmentType.block,
+                valueTable: new Map()
+            })
+            break
+        }
+
+        case OpCode.ExitBlockScope: {
+            this.environments.pop()
+            break
         }
 
         case OpCode.Eof:

@@ -15,5 +15,8 @@ export enum OpCode {
   Set,
 
   Jump,
-  JumpIfFalse
+  JumpIfFalse,
+
+  EnterBlockScope,
+  ExitBlockScope
 }

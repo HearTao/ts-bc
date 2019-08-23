@@ -1,5 +1,6 @@
-import VirtualMachine, { ExecResult } from "../src/vm";
+import VirtualMachine from "../src/vm";
 import { gen } from "../src/gen";
+import { ExecResult } from "../src/types";
 
 function run(code: string) {
   const [op, value] = gen(code)

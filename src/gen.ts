@@ -42,9 +42,18 @@ export function gen(code: string): [(OpCode | Value)[], Value[]] {
       case ts.SyntaxKind.Identifier:
         visitIdentifier(<ts.Identifier>node)
         break
+    case ts.SyntaxKind.Block:
+        visitBlock(<ts.Block>node)
+        break;
       default:
         ts.forEachChild(node, visitor)
     }
+  }
+
+  function visitBlock(block: ts.Block) {
+    op.push(OpCode.EnterBlockScope)
+    block.statements.forEach(visitor)
+    op.push(OpCode.ExitBlockScope)
   }
 
   function visitNumericLiteral(node: ts.NumericLiteral) {
