@@ -79,13 +79,21 @@ export default class VirtualMachine {
     }
   }
 
+  load(dump: VMDump) {
+    this.stack = dump.stack
+    this.environments = dump.environments
+    this.codes = dump.codes
+    this.values = dump.values
+    this.cur = dump.cur
+  }
+
   step(): DoneResult {
     return this.exec()
   }
 
-  public exec(step: true): ExecResult
-  public exec(step?: false): DoneResult
-  public exec(step?: boolean): ExecResult {
+  exec(step: true): ExecResult
+  exec(step?: false): DoneResult
+  exec(step?: boolean): ExecResult {
     const { codes, stack, environments } = this
     main: while (this.cur < codes.length) {
       const op = codes[this.cur++]

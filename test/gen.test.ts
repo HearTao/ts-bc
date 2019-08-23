@@ -79,3 +79,22 @@ test(`should work with step exec`, () => {
   const code = '0 ? 2 : 0 ? 3 : 4'
   stepRun(code)
 })
+
+test(`should work with dump and load`, () => {
+  const code = '0 ? 2 : 0 ? 3 : 4'
+  const [op, value] = gen(code)
+  const vm = new VirtualMachine(op, value)
+  
+  vm.exec(/* step */ true)
+  const dump = vm.dump()
+
+  const vm1 = new VirtualMachine()
+  vm1.load(dump)
+
+  let result: ExecResult
+  do {
+    result = vm1.exec(/* step */ true)
+  } while (!result.finished)
+
+  expect(result.value.value).toBe(eval(code))
+})
