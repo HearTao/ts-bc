@@ -6,9 +6,13 @@ export enum OpCode {
     Mul,
     Div,
 
+    LT,
+    GT,
+
     Push,
     Def,
     Load,
+    Set,
 
     Jump,
     JumpIfFalse,

@@ -33,9 +33,12 @@ export function gen(code: string): [(OpCode | Value)[], Value[]] {
             case ts.SyntaxKind.VariableDeclaration:
                 visitVariableDeclaration(<ts.VariableDeclaration>node)
                 break;
+            case ts.SyntaxKind.WhileStatement:
+                visitWhileStatement(<ts.WhileStatement>node)
+                break;
             case ts.SyntaxKind.Identifier:
                 visitIdentifier(<ts.Identifier>node)
-            // case ts.SyntaxKind.IfStatement:
+                break;
             default:
                 ts.forEachChild(node, visitor)
         }
@@ -88,17 +91,58 @@ export function gen(code: string): [(OpCode | Value)[], Value[]] {
             case ts.SyntaxKind.SlashToken:
                 op.push(OpCode.Div)
                 break;
+            case ts.SyntaxKind.LessThanToken:
+                op.push(OpCode.LT)
+                break;
+            case ts.SyntaxKind.GreaterThanToken:
+                op.push(OpCode.GT)
+                break;
             default:
                 throw new Error('not supported')
         }
     }
 
+    function visitWhileStatement(stmt: ts.WhileStatement) {
+        const label1: Value = { value: 0 }
+        const label2: Value = { value: 0 }
+
+        label2.value = op.length
+        visitor(stmt.expression)
+        op.push(OpCode.JumpIfFalse)
+        op.push(label1)
+
+        visitor(stmt.statement)
+
+        op.push(OpCode.Jump)
+        op.push(label2)
+        label1.value = op.length
+    }
+
     function visitPrefixUnaryExpression(prefix: ts.PrefixUnaryExpression) {
-        // SyntaxKind.PlusPlusToken | SyntaxKind.MinusMinusToken | SyntaxKind.PlusToken | SyntaxKind.MinusToken | SyntaxKind.TildeToken | SyntaxKind.ExclamationToken
         switch (prefix.operator) {
+            case ts.SyntaxKind.PlusPlusToken: {
+                visitor(prefix.operand)
+                op.push(OpCode.Push)
+                op.push({value: 1})
+                op.push(OpCode.Add)
+                visitLeftHandSideExpression(<ts.LeftHandSideExpression>prefix.operand)
+                op.push(OpCode.Set)
+                visitor(prefix.operand)
+                break;
+            }
             default:
                 throw new Error('not supported')
+        }
+    }
 
+    function visitLeftHandSideExpression(lhs: ts.LeftHandSideExpression) {
+        switch (lhs.kind) {
+            case ts.SyntaxKind.Identifier:
+                op.push(OpCode.Push)
+                op.push({value: (<ts.Identifier>lhs).text})
+                break;
+            default:
+                throw new Error('not supported')
         }
     }
 
@@ -119,16 +163,4 @@ export function gen(code: string): [(OpCode | Value)[], Value[]] {
         visitor(cond.whenFalse)
         label1.value = op.length
     }
-    // function visitIfStatement(stmt: ts.IfStatement) {
-    //     if (stmt.elseStatement) {
-    //         visitor(stmt.elseStatement)
-    //     }
-    //     const label1 = op.length - 1
-
-    //     visitor(stmt.thenStatement)
-
-    //     op.push(OpCode.JumpIfFalse)
-    //     op.push({ value: label1 })
-    //     visitor(stmt.expression)
-    // }
 }

@@ -9,15 +9,15 @@ export function assertValue(v: OpCode | Value): Value {
 }
 
 export function assertNumberValue(v: Value) {
-    if (typeof v.value === 'string') {
-        throw new Error(`${v} is string`)
+    if (typeof v.value !== 'number') {
+        throw new Error(`${v} is ${typeof v.value}`)
     }
     return v.value
 }
 
 export function assertStringValue(v: Value) {
-    if (typeof v.value === 'number') {
-        throw new Error(`${v} is number`)
+    if (typeof v.value !== 'string') {
+        throw new Error(`${v} is ${typeof v.value}`)
     }
     return v.value
 }
@@ -85,6 +85,20 @@ export default class VirtualMachine {
                     stack.push({ value: assertNumberValue(left) / assertNumberValue(right) });
                     break;
                 }
+
+                case OpCode.LT: {
+                    const right = this.popStack()
+                    const left = this.popStack()
+                    stack.push({ value: left.value < right.value});
+                    break;
+                }
+
+                case OpCode.GT: {
+                    const right = this.popStack()
+                    const left = this.popStack()
+                    stack.push({ value: left.value > right.value });
+                    break;
+                }
                     
                 case OpCode.Jump: {
                     this.cur = assertNumberValue(this.popCode())
@@ -119,6 +133,17 @@ export default class VirtualMachine {
                         throw new Error('unknown id: ' + name)
                     }
                     stack.push(value)
+                    break;
+                }
+                case OpCode.Set: {
+                    const name = this.popStack()
+                    const value = this.popStack()
+                    const env = this.currentEnv()
+                    const nameText = assertStringValue(name)
+                    if (!env.has(nameText)) {
+                        throw new Error('cannot find: ' + nameText)
+                    }
+                    env.set(nameText, value)
                     break;
                 }
 

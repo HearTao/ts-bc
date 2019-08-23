@@ -1,3 +1,3 @@
 export interface Value {
-    value: number | string
+    value: number | string | boolean
 }
