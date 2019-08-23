@@ -6,7 +6,8 @@
   "scripts": {
     "start": "tsc -w",
     "build": "tsc",
-    "test": "jest"
+    "test": "jest",
+    "prettier": "prettier --config ./prettier.json --write ./types/**/* ./src/* ./src/**/* ./tests/**/*"
   },
   "repository": {
     "type": "git",
@@ -19,6 +20,7 @@
   },
   "homepage": "https://github.com/HearTao/ts-bc#readme",
   "dependencies": {
+    "prettier": "^1.18.2",
     "ts-node": "^8.3.0",
     "typescript": "^3.7.0-dev.20190822"
   },
@@ -30,6 +32,8 @@
   "jest": {
     "preset": "ts-jest",
     "testEnvironment": "node",
-    "testPathIgnorePatterns": ["libs/"]
+    "testPathIgnorePatterns": [
+      "libs/"
+    ]
   }
 }

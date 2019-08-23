@@ -1,5 +1,5 @@
-import VirtualMachine from "./vm";
-import { gen } from "./gen";
+import VirtualMachine from './vm'
+import { gen } from './gen'
 
 const code = `var a = 0;
 while (a < 2) {

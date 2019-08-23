@@ -1,19 +1,19 @@
 export enum OpCode {
-    Eof,
-    Const,
-    Add,
-    Sub,
-    Mul,
-    Div,
+  Eof,
+  Const,
+  Add,
+  Sub,
+  Mul,
+  Div,
 
-    LT,
-    GT,
+  LT,
+  GT,
 
-    Push,
-    Def,
-    Load,
-    Set,
+  Push,
+  Def,
+  Load,
+  Set,
 
-    Jump,
-    JumpIfFalse,
+  Jump,
+  JumpIfFalse
 }
