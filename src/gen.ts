@@ -3,7 +3,7 @@ import { OpCode } from './opcode';
 import { Value } from './value';
 
 export function gen(code: string): [(OpCode | Value)[], Value[]] {
-    const op: (OpCode | Value)[] = [OpCode.Eof]
+    const op: (OpCode | Value)[] = []
     const value: Value[] = []
 
     ts.forEachChild(ts.createSourceFile('', code, ts.ScriptTarget.Latest), visitor)
@@ -42,21 +42,22 @@ export function gen(code: string): [(OpCode | Value)[], Value[]] {
     }
 
     function visitNumericLiteral(node: ts.NumericLiteral) {
+        op.push(OpCode.Const)
         value.push({ value: +node.text})
         op.push({ value: value.length - 1 })
-        op.push(OpCode.Const)
     }
 
     function visitIdentifier(id: ts.Identifier) {
-        op.push(OpCode.Load)
+        op.push(OpCode.Push)
         op.push({ value: id.text })
+        op.push(OpCode.Load)
     }
 
     function visitVariableDeclarationList(variables: ts.VariableDeclarationList) {
-        if (!variables.flags) {
-            variables.declarations.forEach(visitor)
+        if (variables.flags) {
+            throw new Error('not supported')
         }
-        throw new Error('not supported')
+        variables.declarations.forEach(visitor)
     }
 
     function visitVariableDeclaration(variable: ts.VariableDeclaration) {
@@ -64,13 +65,16 @@ export function gen(code: string): [(OpCode | Value)[], Value[]] {
             throw new Error('not supported')            
         }
 
-        op.push(OpCode.Def)
+        op.push(OpCode.Push)
         op.push({ value: (variable.name as ts.Identifier).text })
-
         visitor(variable.initializer)
+        op.push(OpCode.Def)
     }
 
     function visitBinaryExpression(binary: ts.BinaryExpression) {
+        visitor(binary.left)
+        visitor(binary.right)
+
         switch (binary.operatorToken.kind) {
             case ts.SyntaxKind.PlusToken:
                 op.push(OpCode.Add)
@@ -87,15 +91,11 @@ export function gen(code: string): [(OpCode | Value)[], Value[]] {
             default:
                 throw new Error('not supported')
         }
-
-        visitor(binary.right)
-        visitor(binary.left)
     }
 
     function visitPrefixUnaryExpression(prefix: ts.PrefixUnaryExpression) {
         // SyntaxKind.PlusPlusToken | SyntaxKind.MinusMinusToken | SyntaxKind.PlusToken | SyntaxKind.MinusToken | SyntaxKind.TildeToken | SyntaxKind.ExclamationToken
         switch (prefix.operator) {
-            case ts.SyntaxKind.PlusPlusToken:
             default:
                 throw new Error('not supported')
 
@@ -103,17 +103,21 @@ export function gen(code: string): [(OpCode | Value)[], Value[]] {
     }
 
     function visitConditionalExpression(cond: ts.ConditionalExpression) {
-        const label1 = op.length - 1
-        visitor(cond.whenFalse)
-        const label2 = op.length - 1
+        const label1: Value = { value: 0 }
+        const label2: Value = { value: 0 }
 
-        op.push({ value: label1 })
-        op.push(OpCode.Jump)
+        visitor(cond.condition)
+
+        op.push(OpCode.JumpIfFalse)
+        op.push(label2)
 
         visitor(cond.whenTrue)
-        op.push({ value: label2 })
-        op.push(OpCode.JumpIfFalse)
-        visitor(cond.condition)
+        op.push(OpCode.Jump)
+        op.push(label1)
+        label2.value = op.length
+
+        visitor(cond.whenFalse)
+        label1.value = op.length
     }
     // function visitIfStatement(stmt: ts.IfStatement) {
     //     if (stmt.elseStatement) {

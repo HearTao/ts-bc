@@ -29,7 +29,7 @@ export default class VirtualMachine {
     constructor (
         private codes: (OpCode | Value)[] = [],
         private values: Value[] = [],
-        private cur: number = codes.length - 1
+        private cur: number = 0
     ) {
 
     }
@@ -41,24 +41,25 @@ export default class VirtualMachine {
     }
 
     private popCode () {
-        const code = this.codes[this.cur--]
+        const code = this.codes[this.cur++]
         if (!code) throw new Error('no code')
-        return code
+        return assertValue(code)
     }
 
     private currentEnv() {
-        const env = this.environments[this.cur--]
+        const env = this.environments[this.environments.length - 1]
         if (!env) throw new Error('no env')
         return env
     }
 
     exec () {
         const { codes, stack, environments } = this
-        main: while (this.cur >= 0) {
-            const op = codes[this.cur--]
+        main: while (this.cur < codes.length) {
+            const op = codes[this.cur++]
+
             switch (op) {
                 case OpCode.Const:
-                    stack.push(this.values[assertNumberValue(assertValue(this.popCode()))])
+                    stack.push(this.values[assertNumberValue(this.popCode())])
                     break
                 case OpCode.Add: {
                     const right = this.popStack()
@@ -86,19 +87,23 @@ export default class VirtualMachine {
                 }
                     
                 case OpCode.Jump: {
-                    this.cur = assertNumberValue(assertValue(this.popCode()))
+                    this.cur = assertNumberValue(this.popCode())
                     break;
                 }
                     
                 case OpCode.JumpIfFalse: {
                     const cond = this.popStack()
-                    const pos = assertNumberValue(assertValue(this.popCode()))
+                    const pos = assertNumberValue(this.popCode())
                     if (!cond.value) {
                         this.cur = pos
                     }
                     break;
                 }
 
+                case OpCode.Push: {
+                    stack.push(assertValue(this.popCode()))
+                    break;
+                }
                 case OpCode.Def: {
                     const initializer = this.popStack()
                     const name = this.popStack()
@@ -120,7 +125,7 @@ export default class VirtualMachine {
                 case OpCode.Eof:
                     break main;
                 default:
-                    throw new Error('unexpected op')
+                    throw new Error('unexpected op: ' + op)
             }
         }
         

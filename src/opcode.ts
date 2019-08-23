@@ -6,6 +6,7 @@ export enum OpCode {
     Mul,
     Div,
 
+    Push,
     Def,
     Load,
 
