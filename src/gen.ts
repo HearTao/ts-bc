@@ -104,6 +104,13 @@ export function gen(code: string): [(OpCode | Value)[], Value[]] {
   }
 
   function visitBinaryExpression(binary: ts.BinaryExpression) {
+    switch (binary.operatorToken.kind) {
+      case ts.SyntaxKind.EqualsToken:
+      case ts.SyntaxKind.PlusEqualsToken:
+          visitAssignmentExpression(<ts.AssignmentExpression<ts.AssignmentOperatorToken>>binary)
+          return;
+    }
+
     visitor(binary.left)
     visitor(binary.right)
 
@@ -126,6 +133,27 @@ export function gen(code: string): [(OpCode | Value)[], Value[]] {
       case ts.SyntaxKind.GreaterThanToken:
         op.push(OpCode.GT)
         break
+      default:
+        throw new Error('not supported')
+    }
+  }
+
+  function visitAssignmentExpression (expr: ts.AssignmentExpression<ts.AssignmentOperatorToken>) {
+    switch (expr.operatorToken.kind) {
+      case ts.SyntaxKind.EqualsToken: {
+        visitor(expr.right)
+        visitLeftHandSideExpression(expr.left)
+        op.push(OpCode.Set)
+        break;
+      }
+      case ts.SyntaxKind.PlusEqualsToken: {
+        visitor(expr.right)
+        visitor(expr.left)
+        op.push(OpCode.Add)
+        visitLeftHandSideExpression(expr.left)
+        op.push(OpCode.Set)
+      }
+          break;
       default:
         throw new Error('not supported')
     }

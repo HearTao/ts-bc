@@ -1,7 +1,7 @@
 import VirtualMachine from './vm'
 import { gen } from './gen'
 
-const code = `var a = 0; ++a;`
+const code = `var a = 0; a = 2; a;`
 const [op, value] = gen(code)
 
 const vm = new VirtualMachine(op, value)

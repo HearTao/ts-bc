@@ -107,6 +107,24 @@ test(`should crash with block scope`, () => {
   }).toThrow("cannot find name b")
 })
 
+test(`should work with assignment`, () => {
+  const code = `
+  let a = 1;
+  a = 233;
+  a  
+`
+  run(code)
+})
+
+test(`should work with add assignment`, () => {
+  const code = `
+  let a = 1;
+  a += 233;
+  a  
+`
+  run(code)
+})
+
 test(`should work with step exec`, () => {
   const code = '0 ? 2 : 0 ? 3 : 4'
   stepRun(code)
