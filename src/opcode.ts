@@ -11,6 +11,7 @@ export enum OpCode {
 
   Push,
   Def,
+  DefBlock,
   Load,
   Set,
 

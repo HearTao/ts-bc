@@ -1,14 +1,22 @@
 import { OpCode } from './opcode'
 import { Value } from './value'
 import { assertValue, assertNumberValue, assertStringValue } from './utils'
-import { VMDump, DoneResult, ExecResult, Environment, EnvironmentType } from './types'
+import {
+  VMDump,
+  DoneResult,
+  ExecResult,
+  Environment,
+  EnvironmentType
+} from './types'
 
 export default class VirtualMachine {
   private stack: Value[] = []
-  private environments: Environment[] = [{
+  private environments: Environment[] = [
+    {
       type: EnvironmentType.global,
       valueTable: new Map()
-  }]
+    }
+  ]
 
   constructor(
     private codes: (OpCode | Value)[] = [],
@@ -30,25 +38,35 @@ export default class VirtualMachine {
 
   private lookup(name: string) {
     for (let i = this.environments.length - 1; i >= 0; i--) {
-        const env = this.environments[i]
-        if (env.valueTable.has(name)) {
-            return env.valueTable.get(name)!
-        }
+      const env = this.environments[i]
+      if (env.valueTable.has(name)) {
+        return env.valueTable.get(name)!
+      }
     }
     throw new Error('cannot find name ' + name)
   }
 
-  private define (name: string, value: Value) {
-    this.environments[this.environments.length - 1].valueTable.set(name, value)
+  private define(name: string, value: Value, type: EnvironmentType) {
+    for (let i = this.environments.length - 1; i >= 0; i--) {
+      const env = this.environments[i]
+      if (
+        type !== EnvironmentType.block &&
+        env.type === EnvironmentType.block
+      ) {
+        continue
+      }
+      env.valueTable.set(name, value)
+      return
+    }
   }
 
   private setValue(name: string, value: Value) {
     for (let i = this.environments.length - 1; i >= 0; i--) {
-        const env = this.environments[i]
-        if (env.valueTable.has(name)) {
-            env.valueTable.set(name, value)
-            return;
-        }
+      const env = this.environments[i]
+      if (env.valueTable.has(name)) {
+        env.valueTable.set(name, value)
+        return
+      }
     }
     throw new Error('cannot find name ' + name)
   }
@@ -154,7 +172,21 @@ export default class VirtualMachine {
         case OpCode.Def: {
           const initializer = this.popStack()
           const name = this.popStack()
-          this.define(assertStringValue(name), initializer)
+          this.define(
+            assertStringValue(name),
+            initializer,
+            EnvironmentType.lexer
+          )
+          break
+        }
+        case OpCode.DefBlock: {
+          const initializer = this.popStack()
+          const name = this.popStack()
+          this.define(
+            assertStringValue(name),
+            initializer,
+            EnvironmentType.block
+          )
           break
         }
         case OpCode.Load: {
@@ -171,16 +203,16 @@ export default class VirtualMachine {
         }
 
         case OpCode.EnterBlockScope: {
-            this.environments.push({
-                type: EnvironmentType.block,
-                valueTable: new Map()
-            })
-            break
+          this.environments.push({
+            type: EnvironmentType.block,
+            valueTable: new Map()
+          })
+          break
         }
 
         case OpCode.ExitBlockScope: {
-            this.environments.pop()
-            break
+          this.environments.pop()
+          break
         }
 
         case OpCode.Eof:

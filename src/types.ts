@@ -21,24 +21,27 @@ export interface StepResult {
 export type ExecResult = DoneResult | StepResult
 
 export enum EnvironmentType {
-    lexer,
-    block,
-    global
+  lexer,
+  block,
+  global
 }
 
 export interface GlobalEnvironment {
-    type: EnvironmentType.global
-    valueTable: Map<string, Value>
+  type: EnvironmentType.global
+  valueTable: Map<string, Value>
 }
 
 export interface LexerEnvironment {
-    type: EnvironmentType.lexer
-    valueTable: Map<string, Value>
+  type: EnvironmentType.lexer
+  valueTable: Map<string, Value>
 }
 
 export interface BlockEnvironment {
-    type: EnvironmentType.block
-    valueTable: Map<string, Value>
+  type: EnvironmentType.block
+  valueTable: Map<string, Value>
 }
 
-export type Environment = LexerEnvironment | BlockEnvironment | GlobalEnvironment
+export type Environment =
+  | LexerEnvironment
+  | BlockEnvironment
+  | GlobalEnvironment

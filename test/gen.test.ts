@@ -31,14 +31,6 @@ test(`should work with binary expression`, () => {
   run(code)
 })
 
-test(`should work with def and load`, () => {
-  const code = `
-    var a = 1;
-    a;
-  `
-  run(code)
-})
-
 test(`should work with var and cond`, () => {
   const code = `
     var a = 1;
@@ -74,6 +66,45 @@ test(`should work with while loop`, () => {
     a
   `
   run(code)
+})
+
+test(`should work with var variable`, () => {
+  const code = `
+    var a = 1;
+    a;
+  `
+  run(code)
+})
+
+test(`should work with let variable`, () => {
+  const code = `
+    let a = 1;
+    a;
+  `
+  run(code)
+})
+
+test(`should work with const variable`, () => {
+  const code = `
+    const a = 1;
+    a;
+  `
+  run(code)
+})
+
+test(`should crash with block scope`, () => {
+  const code = `
+    var a = 0;
+    while (a < 2) {
+      let b = a + 1
+      ++a
+    }
+    b
+  `
+
+  expect(() => {
+    run(code)
+  }).toThrow("cannot find name b")
 })
 
 test(`should work with step exec`, () => {

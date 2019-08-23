@@ -1,6 +1,7 @@
 import * as ts from 'typescript'
 import { OpCode } from './opcode'
 import { Value } from './value'
+import { EnvironmentType } from './types'
 
 export function gen(code: string): [(OpCode | Value)[], Value[]] {
   const op: (OpCode | Value)[] = []
@@ -33,18 +34,15 @@ export function gen(code: string): [(OpCode | Value)[], Value[]] {
       case ts.SyntaxKind.VariableDeclarationList:
         visitVariableDeclarationList(<ts.VariableDeclarationList>node)
         break
-      case ts.SyntaxKind.VariableDeclaration:
-        visitVariableDeclaration(<ts.VariableDeclaration>node)
-        break
       case ts.SyntaxKind.WhileStatement:
         visitWhileStatement(<ts.WhileStatement>node)
         break
       case ts.SyntaxKind.Identifier:
         visitIdentifier(<ts.Identifier>node)
         break
-    case ts.SyntaxKind.Block:
+      case ts.SyntaxKind.Block:
         visitBlock(<ts.Block>node)
-        break;
+        break
       default:
         ts.forEachChild(node, visitor)
     }
@@ -68,14 +66,25 @@ export function gen(code: string): [(OpCode | Value)[], Value[]] {
     op.push(OpCode.Load)
   }
 
-  function visitVariableDeclarationList(variables: ts.VariableDeclarationList) {
-    if (variables.flags) {
-      throw new Error('not supported')
+  function getVariableEnvirementType(
+    variables: ts.VariableDeclarationList
+  ): EnvironmentType {
+    if (variables.flags & ts.NodeFlags.BlockScoped) {
+      return EnvironmentType.block
     }
-    variables.declarations.forEach(visitor)
+    return EnvironmentType.lexer
   }
 
-  function visitVariableDeclaration(variable: ts.VariableDeclaration) {
+  function visitVariableDeclarationList(variables: ts.VariableDeclarationList) {
+    variables.declarations.forEach(
+      visitVariableDeclaration.bind(null, getVariableEnvirementType(variables))
+    )
+  }
+
+  function visitVariableDeclaration(
+    type: EnvironmentType,
+    variable: ts.VariableDeclaration
+  ) {
     if (!variable.initializer) {
       throw new Error('not supported')
     }
@@ -83,7 +92,15 @@ export function gen(code: string): [(OpCode | Value)[], Value[]] {
     op.push(OpCode.Push)
     op.push({ value: (variable.name as ts.Identifier).text })
     visitor(variable.initializer)
-    op.push(OpCode.Def)
+
+    switch (type) {
+      case EnvironmentType.block:
+        op.push(OpCode.DefBlock)
+        break
+      default:
+        op.push(OpCode.Def)
+        break
+    }
   }
 
   function visitBinaryExpression(binary: ts.BinaryExpression) {
