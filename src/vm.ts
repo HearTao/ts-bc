@@ -15,6 +15,25 @@ export function assertNumberValue(v: Value) {
     return v.value
 }
 
+export interface VMDump {
+    stack: Value[]
+    environments: Map<string, Value>[]
+    codes: (OpCode | Value)[]
+    values: Value[]
+    cur: number
+}
+
+export interface DoneResult {
+    finished: true
+    value: Value
+}
+
+export interface StepResult {
+    finished: false
+}
+
+export type ExecResult = DoneResult | StepResult
+
 export function assertStringValue(v: Value) {
     if (typeof v.value !== 'string') {
         throw new Error(`${v} is ${typeof v.value}`)
@@ -52,7 +71,23 @@ export default class VirtualMachine {
         return env
     }
 
-    exec () {
+    dump (): VMDump {
+        return {
+            stack: this.stack,
+            environments: this.environments,
+            codes: this.codes,
+            values: this.values,
+            cur: this.cur
+        }
+    }
+
+    step (): DoneResult {
+        return this.exec()
+    }
+
+    public exec (step: true): ExecResult
+    public exec (step?: false): DoneResult
+    public exec (step?: boolean): ExecResult {
         const { codes, stack, environments } = this
         main: while (this.cur < codes.length) {
             const op = codes[this.cur++]
@@ -152,8 +187,17 @@ export default class VirtualMachine {
                 default:
                     throw new Error('unexpected op: ' + op)
             }
+
+            if (step) {
+                return {
+                    finished: false
+                }
+            }
         }
         
-        return this.popStack()
+        return {
+            finished: true,
+            value: this.popStack()
+        }
     }
 }

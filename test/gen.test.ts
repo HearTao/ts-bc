@@ -1,20 +1,33 @@
-import VirtualMachine from "../src/vm";
+import VirtualMachine, { ExecResult } from "../src/vm";
 import { gen } from "../src/gen";
 
-test(`should work with condition`, () => {
-  const code = '0 ? 2 : 0 ? 3 : 4'
+function run(code: string) {
   const [op, value] = gen(code)
   const vm = new VirtualMachine(op, value)
   
-  expect(vm.exec().value).toBe(eval(code))
+  expect(vm.exec().value.value).toBe(eval(code))
+}
+
+function stepRun(code: string) {
+  const [op, value] = gen(code)
+  const vm = new VirtualMachine(op, value)
+
+  let result: ExecResult
+  do {
+    result = vm.exec(/* step */ true)
+  } while (!result.finished)
+
+  expect(result.value.value).toBe(eval(code))
+}
+
+test(`should work with condition`, () => {
+  const code = '0 ? 2 : 0 ? 3 : 4'
+  run(code)
 })
 
 test(`should work with binary expression`, () => {
   const code = '1 + (2 - 3) * 4'
-  const [op, value] = gen(code)
-  const vm = new VirtualMachine(op, value)
-  
-  expect(vm.exec().value).toBe(eval(code))
+  run(code)
 })
 
 test(`should work with def and load`, () => {
@@ -22,10 +35,7 @@ test(`should work with def and load`, () => {
     var a = 1;
     a;
   `
-  const [op, value] = gen(code)
-  const vm = new VirtualMachine(op, value)
-  
-  expect(vm.exec().value).toBe(eval(code))
+  run(code)
 })
 
 test(`should work with var and cond`, () => {
@@ -33,10 +43,7 @@ test(`should work with var and cond`, () => {
     var a = 1;
     a ? a + 1 : 0;
   `
-  const [op, value] = gen(code)
-  const vm = new VirtualMachine(op, value)
-  
-  expect(vm.exec().value).toBe(eval(code))
+  run(code)
 })
 
 test(`should work with prefix unary`, () => {
@@ -44,26 +51,17 @@ test(`should work with prefix unary`, () => {
     var a = 1;
     ++a
   `
-  const [op, value] = gen(code)
-  const vm = new VirtualMachine(op, value)
-  
-  expect(vm.exec().value).toBe(eval(code))
+  run(code)
 })
 
 test(`should work with lt`, () => {
   const code = '1 < 2'
-  const [op, value] = gen(code)
-  const vm = new VirtualMachine(op, value)
-  
-  expect(vm.exec().value).toBe(eval(code))
+  run(code)
 })
 
 test(`should work with gt`, () => {
   const code = '1 > 2'
-  const [op, value] = gen(code)
-  const vm = new VirtualMachine(op, value)
-  
-  expect(vm.exec().value).toBe(eval(code))
+  run(code)
 })
 
 test(`should work with while loop`, () => {
@@ -74,8 +72,10 @@ test(`should work with while loop`, () => {
     }
     a
   `
-  const [op, value] = gen(code)
-  const vm = new VirtualMachine(op, value)
-  
-  expect(vm.exec().value).toBe(eval(code))
+  run(code)
+})
+
+test(`should work with step exec`, () => {
+  const code = '0 ? 2 : 0 ? 3 : 4'
+  stepRun(code)
 })
