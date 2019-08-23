@@ -1,0 +1,20 @@
+name: CI
+
+on: push
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v1
+      with:
+        fetch-depth: 1
+    - uses: actions/setup-node@v1
+    - name: Install Dependencies
+      run: npm ci
+    - name: Run Test
+      run: npm test
+    - name: Coverage Report
+      run: npm test -- --coverage # && npx codecov
+      env:
+        CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
