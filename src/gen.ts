@@ -13,9 +13,7 @@ export function gen(code: string): [(OpCode | Value)[], Value[]] {
     function visitor (node: ts.Node) {
         switch (node.kind) {
             case ts.SyntaxKind.NumericLiteral:
-                value.push({ value: +(<ts.NumericLiteral>node).text})
-                op.push({ value: value.length - 1 })
-                op.push(OpCode.Load)
+                visitNumericLiteral(<ts.NumericLiteral>node)
                 break;
             case ts.SyntaxKind.BinaryExpression:
                 visitBinaryExpression(<ts.BinaryExpression>node)
@@ -26,10 +24,50 @@ export function gen(code: string): [(OpCode | Value)[], Value[]] {
             case ts.SyntaxKind.ConditionalExpression:
                 visitConditionalExpression(<ts.ConditionalExpression>node)
                 break;
+            case ts.SyntaxKind.PrefixUnaryExpression:
+                visitPrefixUnaryExpression(<ts.PrefixUnaryExpression>node)
+                break;
+            case ts.SyntaxKind.VariableDeclarationList:
+                visitVariableDeclarationList(<ts.VariableDeclarationList>node)
+                break
+            case ts.SyntaxKind.VariableDeclaration:
+                visitVariableDeclaration(<ts.VariableDeclaration>node)
+                break;
+            case ts.SyntaxKind.Identifier:
+                visitIdentifier(<ts.Identifier>node)
             // case ts.SyntaxKind.IfStatement:
             default:
                 ts.forEachChild(node, visitor)
         }
+    }
+
+    function visitNumericLiteral(node: ts.NumericLiteral) {
+        value.push({ value: +node.text})
+        op.push({ value: value.length - 1 })
+        op.push(OpCode.Const)
+    }
+
+    function visitIdentifier(id: ts.Identifier) {
+        op.push(OpCode.Load)
+        op.push({ value: id.text })
+    }
+
+    function visitVariableDeclarationList(variables: ts.VariableDeclarationList) {
+        if (!variables.flags) {
+            variables.declarations.forEach(visitor)
+        }
+        throw new Error('not supported')
+    }
+
+    function visitVariableDeclaration(variable: ts.VariableDeclaration) {
+        if (!variable.initializer) {
+            throw new Error('not supported')            
+        }
+
+        op.push(OpCode.Def)
+        op.push({ value: (variable.name as ts.Identifier).text })
+
+        visitor(variable.initializer)
     }
 
     function visitBinaryExpression(binary: ts.BinaryExpression) {
@@ -54,11 +92,21 @@ export function gen(code: string): [(OpCode | Value)[], Value[]] {
         visitor(binary.left)
     }
 
+    function visitPrefixUnaryExpression(prefix: ts.PrefixUnaryExpression) {
+        // SyntaxKind.PlusPlusToken | SyntaxKind.MinusMinusToken | SyntaxKind.PlusToken | SyntaxKind.MinusToken | SyntaxKind.TildeToken | SyntaxKind.ExclamationToken
+        switch (prefix.operator) {
+            case ts.SyntaxKind.PlusPlusToken:
+            default:
+                throw new Error('not supported')
+
+        }
+    }
+
     function visitConditionalExpression(cond: ts.ConditionalExpression) {
         const label1 = op.length - 1
         visitor(cond.whenFalse)
         const label2 = op.length - 1
-        
+
         op.push({ value: label1 })
         op.push(OpCode.Jump)
 
