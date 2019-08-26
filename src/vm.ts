@@ -8,7 +8,16 @@ import {
   EnvironmentType,
   StackFrame
 } from './types'
-import { VObject, JSNumber, JSBoolean, JSArray } from './value'
+import {
+  VObject,
+  JSNumber,
+  JSBoolean,
+  JSArray,
+  JSUndefined,
+  JSNull,
+  JSFunction,
+  JSString
+} from './value'
 
 export default class VirtualMachine {
   private stack: VObject[] = []
@@ -46,6 +55,11 @@ export default class VirtualMachine {
       if (env.valueTable.has(name)) {
         return env.valueTable.get(name)!
       }
+      if (env.type === EnvironmentType.lexer) {
+        if (env.upValue.has(name)) {
+          return env.upValue.get(name)!
+        }
+      }
     }
     throw new Error('cannot find name ' + name)
   }
@@ -70,6 +84,12 @@ export default class VirtualMachine {
       if (env.valueTable.has(name)) {
         env.valueTable.set(name, value)
         return
+      }
+      if (env.type === EnvironmentType.lexer) {
+        if (env.upValue.has(name)) {
+          env.upValue.set(name, value)
+          return
+        }
       }
     }
     throw new Error('cannot find name ' + name)
@@ -235,15 +255,20 @@ export default class VirtualMachine {
         }
 
         case OpCode.Call: {
-          const call = this.popStack()
+          const callee = this.popStack()
           const length = this.popStack()
+
+          if (!callee.isObject() || !callee.isFunction()) {
+            throw new Error('is not callable')
+          }
 
           const stackFrame: StackFrame = {
             ret: this.cur,
             entry: this.stack.length,
             environments: {
               type: EnvironmentType.lexer,
-              valueTable: new Map()
+              valueTable: new Map(),
+              upValue: callee.upvalue
             }
           }
 
@@ -252,7 +277,7 @@ export default class VirtualMachine {
             this.frames[this.frames.length - 1].environments
           )
 
-          this.cur = call.toNumber().value
+          this.cur = callee.pos
 
           const args: VObject[] = []
           for (let i = 0; i < length.toNumber().value; ++i) {
@@ -296,6 +321,39 @@ export default class VirtualMachine {
             arr.push(elements.pop()!)
           }
           this.stack.push(new JSArray(arr))
+          break
+        }
+
+        case OpCode.CreateFunction: {
+          const name = this.popStack()
+          const pos = this.popStack()
+          const upValueCount = this.popStack()
+          const upValues: string[] = []
+          const upValue: Map<string, VObject> = new Map()
+
+          for (let i = 0; i < upValueCount.toNumber().value; ++i) {
+            upValues.push(this.popStack().toString().value)
+          }
+
+          const func = new JSFunction(
+            name.toString(),
+            pos.toNumber().value,
+            upValue
+          )
+          this.define(name.toString().value, func, EnvironmentType.lexer)
+          this.stack.push(func)
+
+          upValues.forEach(name => upValue.set(name, this.lookup(name)))
+          break
+        }
+
+        case OpCode.Null: {
+          this.stack.push(JSNull.instance)
+          break
+        }
+
+        case OpCode.Undefined: {
+          this.stack.push(JSUndefined.instance)
           break
         }
 

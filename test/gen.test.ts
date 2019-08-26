@@ -171,6 +171,38 @@ test(`should work with recu`, () => {
   run(code)
 })
 
+test(`should work with scopes`, () => {
+  const code = `
+    var a = 0;
+    function foo () {
+      var a = 1;
+      var i = 0;
+      while (i < 1) {
+        let a = 2
+      }
+    }
+    a
+  `
+
+  run(code)
+})
+
+test(`should work with upvalue`, () => {
+  const code = `
+    function foo() {
+      var a = 0;
+      function bar () {
+        a += 1;
+        return a;
+      }
+      return bar;
+    }
+    var b = foo();
+    b();
+    b()
+  `
+})
+
 test(`should work with step exec`, () => {
   const code = '0 ? 2 : 0 ? 3 : 4'
   stepRun(code)

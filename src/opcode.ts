@@ -26,7 +26,12 @@ export enum OpCode {
   Ret,
   Call,
 
+  Null,
+  Undefined,
+
   CreateArray,
+  CreateFunction,
+  CreateObject,
 
   IndexAccess
 }

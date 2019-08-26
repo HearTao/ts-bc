@@ -35,6 +35,7 @@ export interface GlobalEnvironment {
 export interface LexerEnvironment {
   type: EnvironmentType.lexer
   valueTable: Map<string, VObject>
+  upValue: Map<string, VObject>
 }
 
 export interface BlockEnvironment {

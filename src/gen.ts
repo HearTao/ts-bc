@@ -1,16 +1,38 @@
+/// <reference path="./typescript.d.ts"/>
+
 import * as ts from 'typescript'
 import { OpCode, OpValue, Label } from './opcode'
-import { EnvironmentType, StackFrame } from './types'
-import { JSString, VObject, JSObject, JSNumber } from './value'
+import { EnvironmentType } from './types'
+import { JSString, VObject, JSNumber } from './value'
+import createVHost from './vhost'
+
+interface LexerContext {
+  locals?: ts.SymbolTable
+  upValue: Set<string>
+}
 
 export function gen(code: string): [(OpCode | OpValue)[], VObject[]] {
   const op: (OpCode | OpValue)[] = []
   const value: VObject[] = []
 
-  ts.forEachChild(
-    ts.createSourceFile('', code, ts.ScriptTarget.Latest),
-    visitor
+  const host = createVHost()
+  const filename = 'mod.tsx'
+  host.writeFile(filename, code, false)
+  const program = ts.createProgram(
+    [filename],
+    {
+      jsx: ts.JsxEmit.Preserve,
+      experimentalDecorators: true,
+      target: ts.ScriptTarget.Latest
+    },
+    host
   )
+
+  const lexerContext: LexerContext[] = []
+  const checker = program.getTypeChecker()
+  const sourceFile = program.getSourceFile(filename)
+
+  ts.forEachChild(sourceFile!, visitor)
 
   return [op, value]
 
@@ -57,7 +79,7 @@ export function gen(code: string): [(OpCode | OpValue)[], VObject[]] {
         break
       case ts.SyntaxKind.ElementAccessExpression:
         visitElementAccessExpression(<ts.ElementAccessExpression>node)
-        break;
+        break
       case ts.SyntaxKind.ArrayLiteralExpression:
         visitArrayLiteralExpression(<ts.ArrayLiteralExpression>node)
         break
@@ -86,7 +108,9 @@ export function gen(code: string): [(OpCode | OpValue)[], VObject[]] {
     op.push({ value: arr.elements.length })
   }
 
-  function visitElementAccessExpression(elementAccess: ts.ElementAccessExpression) {
+  function visitElementAccessExpression(
+    elementAccess: ts.ElementAccessExpression
+  ) {
     visitor(elementAccess.expression)
     visitor(elementAccess.argumentExpression)
     op.push(OpCode.IndexAccess)
@@ -130,18 +154,26 @@ export function gen(code: string): [(OpCode | OpValue)[], VObject[]] {
     pushConst(new JSString('arguments'))
     op.push(OpCode.Def)
 
+    lexerContext.push({
+      locals: func.locals,
+      upValue: new Set()
+    })
+
     func.body!.statements.forEach(visitor)
 
-    op.push(OpCode.Push)
-    op.push({ value: 0 })
+    op.push(OpCode.Undefined)
     op.push(OpCode.Ret)
     updateLabel(label2)
 
+    const context = lexerContext.pop()!
+    context.upValue.forEach(u => pushConst(new JSString(u)))
+    op.push(OpCode.Push)
+    op.push({ value: context.upValue.size })
+
     op.push(OpCode.Push)
     op.push(label1)
-
     pushConst(new JSString((func.name as ts.Identifier).text))
-    op.push(OpCode.Def)
+    op.push(OpCode.CreateFunction)
   }
 
   function visitBlock(block: ts.Block) {
@@ -157,6 +189,13 @@ export function gen(code: string): [(OpCode | OpValue)[], VObject[]] {
   function visitIdentifier(id: ts.Identifier) {
     pushConst(new JSString(id.text))
     op.push(OpCode.Load)
+
+    if (lexerContext.length) {
+      const context = lexerContext[lexerContext.length - 1]
+      if (!context.locals!.has(id.text as ts.__String)) {
+        context.upValue.add(id.text)
+      }
+    }
   }
 
   function getVariableEnvirementType(

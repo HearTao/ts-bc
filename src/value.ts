@@ -5,7 +5,9 @@ export enum ObjectType {
   Object,
   Value,
   Function,
-  Array
+  Array,
+  Undefined,
+  Null
 }
 
 export abstract class VObject {
@@ -56,7 +58,7 @@ export abstract class VObject {
 }
 
 export abstract class JSPrimitive extends VObject {
-  protected abstract get value(): string | number | boolean
+  protected abstract get value(): any
 
   public debugValue() {
     return this.value
@@ -82,7 +84,7 @@ export abstract class JSObject extends VObject {
     return this.type === ObjectType.Function
   }
 
-  toArray (): JSArray {
+  toArray(): JSArray {
     throw new Error('invalid cast')
   }
 }
@@ -139,8 +141,40 @@ export class JSBoolean extends JSPrimitive {
   }
 }
 
+export class JSUndefined extends JSPrimitive {
+  value: undefined = undefined
+
+  public get type() {
+    return ObjectType.Undefined
+  }
+
+  toBoolean() {
+    return new JSBoolean(false)
+  }
+
+  public static instance = new JSUndefined()
+}
+
+export class JSNull extends JSPrimitive {
+  value: null = null
+
+  public get type() {
+    return ObjectType.Null
+  }
+
+  toBoolean() {
+    return new JSBoolean(false)
+  }
+
+  public static instance = new JSNull()
+}
+
 export class JSFunction extends JSObject {
-  constructor(public pos: number, args: number) {
+  constructor(
+    public name: JSString,
+    public pos: number,
+    public upvalue: Map<string, VObject>
+  ) {
     super()
   }
 
@@ -158,14 +192,14 @@ export class JSArray extends JSObject {
     super()
   }
 
-  public get (idx: number) {
+  public get(idx: number) {
     if (idx < 0 || idx >= this.items.length) {
       throw new Error('index access out of range')
     }
     return this.items[idx]
   }
 
-  toArray () {
+  toArray() {
     return this
   }
 
