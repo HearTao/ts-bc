@@ -19,22 +19,30 @@ import {
   JSString,
   JSObject
 } from './value'
+import { initPrototype } from './bom';
 
 export default class VirtualMachine {
   private stack: VObject[] = []
   private frames: StackFrame[] = []
-  private environments: Environment[] = [
-    {
-      type: EnvironmentType.global,
-      valueTable: new Map()
-    }
-  ]
+  private environments: Environment[] = []
 
   constructor(
     private codes: (OpCode | OpValue)[] = [],
     private values: VObject[] = [],
     private cur: number = 0
-  ) {}
+  ) {
+    this.initGlobal()
+  }
+
+  private initGlobal (){
+    const valueTable = new Map<string, VObject>()
+    this.environments.push({
+      type: EnvironmentType.global,
+      valueTable
+    })
+
+    initPrototype(valueTable)
+  }
 
   private popStack() {
     const value = this.stack.pop()

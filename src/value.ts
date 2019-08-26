@@ -220,6 +220,10 @@ export class JSFunction extends JSObject {
   }
 }
 
+export class JSBuiltinFunction extends JSFunction {
+  
+}
+
 export class JSArray extends JSObject {
   get type() {
     return ObjectType.Array
@@ -231,7 +235,7 @@ export class JSArray extends JSObject {
 
   get(idx: JSNumber) {
     if (idx.value < 0 || idx.value >= this.items.length) {
-      throw new Error('index access out of range')
+      return JSUndefined.instance
     }
     return this.items[idx.value]
   }
