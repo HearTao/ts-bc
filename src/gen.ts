@@ -1,11 +1,11 @@
 import * as ts from 'typescript'
-import { OpCode } from './opcode'
-import { Value } from './value'
+import { OpCode, OpValue, Label } from './opcode'
 import { EnvironmentType, StackFrame } from './types'
+import { JSString, VObject, JSObject, JSNumber } from './value'
 
-export function gen(code: string): [(OpCode | Value)[], Value[]] {
-  const op: (OpCode | Value)[] = []
-  const value: Value[] = []
+export function gen(code: string): [(OpCode | OpValue)[], VObject[]] {
+  const op: (OpCode | OpValue)[] = []
+  const value: VObject[] = []
 
   ts.forEachChild(
     ts.createSourceFile('', code, ts.ScriptTarget.Latest),
@@ -60,13 +60,26 @@ export function gen(code: string): [(OpCode | Value)[], Value[]] {
     }
   }
 
+  function createLabel(): Label {
+    return { value: op.length }
+  }
+
+  function updateLabel(l: Label) {
+    l.value = op.length
+  }
+
+  function pushConst(v: VObject) {
+    value.push(v)
+    op.push(OpCode.Const)
+    op.push({ value: value.length - 1 })
+  }
+
   function visitParameter(param: ts.ParameterDeclaration) {
     if (!ts.isIdentifier(param.name)) {
       throw new Error('not supported')
     }
 
-    op.push(OpCode.Push)
-    op.push({ value: param.name.text})
+    pushConst(new JSString(param.name.text))
     op.push(OpCode.Def)
   }
 
@@ -87,26 +100,25 @@ export function gen(code: string): [(OpCode | Value)[], Value[]] {
   }
 
   function visitFunctionDeclaration(func: ts.FunctionDeclaration) {
-    const label1: Value = { value: 0 }
-    const label2: Value = { value: 0 }
+    const label1 = createLabel()
+    const label2 = createLabel()
 
     op.push(OpCode.Jump)
     op.push(label2)
 
-    label1.value = op.length
+    updateLabel(label1)
     func.parameters.forEach(visitor)
     func.body!.statements.forEach(visitor)
 
     op.push(OpCode.Push)
     op.push({ value: 0 })
     op.push(OpCode.Ret)
-
-    label2.value = op.length
+    updateLabel(label2)
 
     op.push(OpCode.Push)
     op.push(label1)
-    op.push(OpCode.Push)
-    op.push({ value: (func.name as ts.Identifier).text })
+
+    pushConst(new JSString((func.name as ts.Identifier).text))
     op.push(OpCode.Def)
   }
 
@@ -117,14 +129,11 @@ export function gen(code: string): [(OpCode | Value)[], Value[]] {
   }
 
   function visitNumericLiteral(node: ts.NumericLiteral) {
-    op.push(OpCode.Const)
-    value.push({ value: +node.text })
-    op.push({ value: value.length - 1 })
+    pushConst(new JSNumber(+node.text))
   }
 
   function visitIdentifier(id: ts.Identifier) {
-    op.push(OpCode.Push)
-    op.push({ value: id.text })
+    pushConst(new JSString(id.text))
     op.push(OpCode.Load)
   }
 
@@ -152,8 +161,7 @@ export function gen(code: string): [(OpCode | Value)[], Value[]] {
     }
 
     visitor(variable.initializer)
-    op.push(OpCode.Push)
-    op.push({ value: (variable.name as ts.Identifier).text })
+    pushConst(new JSString((variable.name as ts.Identifier).text))
 
     switch (type) {
       case EnvironmentType.block:
@@ -169,7 +177,9 @@ export function gen(code: string): [(OpCode | Value)[], Value[]] {
     switch (binary.operatorToken.kind) {
       case ts.SyntaxKind.EqualsToken:
       case ts.SyntaxKind.PlusEqualsToken:
-        visitAssignmentExpression(<ts.AssignmentExpression<ts.AssignmentOperatorToken>>binary)
+        visitAssignmentExpression(<
+          ts.AssignmentExpression<ts.AssignmentOperatorToken>
+        >binary)
         return
     }
 
@@ -231,10 +241,9 @@ export function gen(code: string): [(OpCode | Value)[], Value[]] {
   }
 
   function visitWhileStatement(stmt: ts.WhileStatement) {
-    const label1: Value = { value: 0 }
-    const label2: Value = { value: 0 }
+    const label1 = createLabel()
+    const label2 = createLabel()
 
-    label2.value = op.length
     visitor(stmt.expression)
     op.push(OpCode.JumpIfFalse)
     op.push(label1)
@@ -243,7 +252,7 @@ export function gen(code: string): [(OpCode | Value)[], Value[]] {
 
     op.push(OpCode.Jump)
     op.push(label2)
-    label1.value = op.length
+    updateLabel(label1)
   }
 
   function visitPrefixUnaryExpression(prefix: ts.PrefixUnaryExpression) {
@@ -266,8 +275,7 @@ export function gen(code: string): [(OpCode | Value)[], Value[]] {
   function visitLeftHandSideExpression(lhs: ts.LeftHandSideExpression) {
     switch (lhs.kind) {
       case ts.SyntaxKind.Identifier:
-        op.push(OpCode.Push)
-        op.push({ value: (<ts.Identifier>lhs).text })
+        pushConst(new JSString((<ts.Identifier>lhs).text))
         break
       default:
         throw new Error('not supported')
@@ -275,8 +283,8 @@ export function gen(code: string): [(OpCode | Value)[], Value[]] {
   }
 
   function visitConditionalExpression(cond: ts.ConditionalExpression) {
-    const label1: Value = { value: 0 }
-    const label2: Value = { value: 0 }
+    const label1 = createLabel()
+    const label2 = createLabel()
 
     visitor(cond.condition)
 
@@ -286,9 +294,9 @@ export function gen(code: string): [(OpCode | Value)[], Value[]] {
     visitor(cond.whenTrue)
     op.push(OpCode.Jump)
     op.push(label1)
-    label2.value = op.length
+    updateLabel(label2)
 
     visitor(cond.whenFalse)
-    label1.value = op.length
+    updateLabel(label1)
   }
 }

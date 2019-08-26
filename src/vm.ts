@@ -1,6 +1,5 @@
-import { OpCode } from './opcode'
-import { Value } from './value'
-import { assertValue, assertNumberValue, assertStringValue } from './utils'
+import { OpCode, OpValue } from './opcode'
+import { assertOPValue } from './utils'
 import {
   VMDump,
   DoneResult,
@@ -9,9 +8,10 @@ import {
   EnvironmentType,
   StackFrame
 } from './types'
+import { VObject, JSNumber, JSBoolean } from './value'
 
 export default class VirtualMachine {
-  private stack: Value[] = []
+  private stack: VObject[] = []
   private frames: StackFrame[] = []
   private environments: Environment[] = [
     {
@@ -21,8 +21,8 @@ export default class VirtualMachine {
   ]
 
   constructor(
-    private codes: (OpCode | Value)[] = [],
-    private values: Value[] = [],
+    private codes: (OpCode | OpValue)[] = [],
+    private values: VObject[] = [],
     private cur: number = 0
   ) {}
 
@@ -37,7 +37,7 @@ export default class VirtualMachine {
   private popCode() {
     const code = this.codes[this.cur++]
     if (!code) throw new Error('no code')
-    return assertValue(code)
+    return assertOPValue(code)
   }
 
   private lookup(name: string) {
@@ -50,7 +50,7 @@ export default class VirtualMachine {
     throw new Error('cannot find name ' + name)
   }
 
-  private define(name: string, value: Value, type: EnvironmentType) {
+  private define(name: string, value: VObject, type: EnvironmentType) {
     for (let i = this.environments.length - 1; i >= 0; i--) {
       const env = this.environments[i]
       if (
@@ -64,7 +64,7 @@ export default class VirtualMachine {
     }
   }
 
-  private setValue(name: string, value: Value) {
+  private setValue(name: string, value: VObject) {
     for (let i = this.environments.length - 1; i >= 0; i--) {
       const env = this.environments[i]
       if (env.valueTable.has(name)) {
@@ -78,6 +78,7 @@ export default class VirtualMachine {
   dump(): VMDump {
     return {
       stack: this.stack,
+      frames: this.frames,
       environments: this.environments,
       codes: this.codes,
       values: this.values,
@@ -87,6 +88,7 @@ export default class VirtualMachine {
 
   load(dump: VMDump) {
     this.stack = dump.stack
+    this.frames = dump.frames
     this.environments = dump.environments
     this.codes = dump.codes
     this.values = dump.values
@@ -105,117 +107,117 @@ export default class VirtualMachine {
 
       switch (op) {
         case OpCode.Const:
-          this.stack.push(this.values[assertNumberValue(this.popCode())])
+          this.stack.push(this.values[this.popCode()])
           break
         case OpCode.Add: {
           const right = this.popStack()
           const left = this.popStack()
-          this.stack.push({
-            value: assertNumberValue(left) + assertNumberValue(right)
-          })
+          this.stack.push(
+            new JSNumber(left.toNumber().value + right.toNumber().value)
+          )
           break
         }
         case OpCode.Sub: {
           const right = this.popStack()
           const left = this.popStack()
-          this.stack.push({
-            value: assertNumberValue(left) - assertNumberValue(right)
-          })
+          this.stack.push(
+            new JSNumber(left.toNumber().value - right.toNumber().value)
+          )
           break
         }
         case OpCode.Mul: {
           const right = this.popStack()
           const left = this.popStack()
-          this.stack.push({
-            value: assertNumberValue(left) * assertNumberValue(right)
-          })
+          this.stack.push(
+            new JSNumber(left.toNumber().value * right.toNumber().value)
+          )
           break
         }
         case OpCode.Div: {
           const right = this.popStack()
           const left = this.popStack()
-          this.stack.push({
-            value: assertNumberValue(left) / assertNumberValue(right)
-          })
+          this.stack.push(
+            new JSNumber(left.toNumber().value / right.toNumber().value)
+          )
           break
         }
 
         case OpCode.LT: {
           const right = this.popStack()
           const left = this.popStack()
-          this.stack.push({ value: left.value < right.value })
+          this.stack.push(
+            new JSBoolean(left.toNumber().value < right.toNumber().value)
+          )
           break
         }
 
         case OpCode.GT: {
           const right = this.popStack()
           const left = this.popStack()
-          this.stack.push({ value: left.value > right.value })
+          this.stack.push(
+            new JSBoolean(left.toNumber().value > right.toNumber().value)
+          )
           break
         }
 
         case OpCode.StrictEQ: {
           const right = this.popStack()
           const left = this.popStack()
-          this.stack.push({ value: left.value === right.value })
+          this.stack.push(
+            new JSBoolean(left.toNumber().value === right.toNumber().value)
+          )
           break
         }
 
         case OpCode.StrictNEQ: {
           const right = this.popStack()
           const left = this.popStack()
-          this.stack.push({ value: left.value !== right.value })
+          this.stack.push(
+            new JSBoolean(left.toNumber().value !== right.toNumber().value)
+          )
           break
         }
 
         case OpCode.Jump: {
-          this.cur = assertNumberValue(this.popCode())
+          this.cur = this.popCode()
           break
         }
 
         case OpCode.JumpIfFalse: {
           const cond = this.popStack()
-          const pos = assertNumberValue(this.popCode())
-          if (!cond.value) {
+          const pos = this.popCode()
+          if (!cond.toBoolean().value) {
             this.cur = pos
           }
           break
         }
 
         case OpCode.Push: {
-          this.stack.push(assertValue(this.popCode()))
+          this.stack.push(new JSNumber(this.popCode()))
           break
         }
         case OpCode.Def: {
           const name = this.popStack()
           const initializer = this.popStack()
-          this.define(
-            assertStringValue(name),
-            initializer,
-            EnvironmentType.lexer
-          )
+          this.define(name.toString().value, initializer, EnvironmentType.lexer)
           break
         }
         case OpCode.DefBlock: {
           const name = this.popStack()
           const initializer = this.popStack()
-          this.define(
-            assertStringValue(name),
-            initializer,
-            EnvironmentType.block
-          )
+          this.define(name.toString().value, initializer, EnvironmentType.block)
           break
         }
         case OpCode.Load: {
           const name = this.popStack()
-          const value = this.lookup(assertStringValue(name))
+          const value = this.lookup(name.toString().value)
           this.stack.push(value)
           break
         }
         case OpCode.Set: {
           const name = this.popStack()
           const value = this.popStack()
-          this.setValue(assertStringValue(name), value)
+          this.setValue(name.toString().value, value)
           break
         }
 
@@ -250,10 +252,10 @@ export default class VirtualMachine {
             this.frames[this.frames.length - 1].environments
           )
 
-          this.cur = assertNumberValue(call)
-          
-          const args: Value[] = []
-          for(let i = 0 ;i < assertNumberValue(length); ++i)  {
+          this.cur = call.toNumber().value
+
+          const args: VObject[] = []
+          for (let i = 0; i < length.toNumber().value; ++i) {
             args.push(this.popStack())
           }
 

@@ -6,7 +6,7 @@ function run(code: string) {
   const [op, value] = gen(code)
   const vm = new VirtualMachine(op, value)
   
-  expect(vm.exec().value.value).toBe(eval(code))
+  expect(vm.exec().value.debugValue()).toBe(eval(code))
 }
 
 function stepRun(code: string) {
@@ -18,7 +18,7 @@ function stepRun(code: string) {
     result = vm.exec(/* step */ true)
   } while (!result.finished)
 
-  expect(result.value.value).toBe(eval(code))
+  expect(result.value.debugValue()).toBe(eval(code))
 }
 
 test(`should work with condition`, () => {
@@ -184,5 +184,5 @@ test(`should work with dump and load`, () => {
     result = vm1.exec(/* step */ true)
   } while (!result.finished)
 
-  expect(result.value.value).toBe(eval(code))
+  expect(result.value.debugValue()).toBe(eval(code))
 })

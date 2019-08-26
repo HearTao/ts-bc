@@ -1,17 +1,18 @@
-import { Value } from './value'
-import { OpCode } from './opcode'
+import { OpCode, OpValue } from './opcode'
+import { VObject } from './value'
 
 export interface VMDump {
-  stack: Value[]
+  stack: VObject[]
+  frames: StackFrame[]
   environments: Environment[]
-  codes: (OpCode | Value)[]
-  values: Value[]
+  codes: (OpCode | OpValue)[]
+  values: VObject[]
   cur: number
 }
 
 export interface DoneResult {
   finished: true
-  value: Value
+  value: VObject
 }
 
 export interface StepResult {
@@ -28,17 +29,17 @@ export enum EnvironmentType {
 
 export interface GlobalEnvironment {
   type: EnvironmentType.global
-  valueTable: Map<string, Value>
+  valueTable: Map<string, VObject>
 }
 
 export interface LexerEnvironment {
   type: EnvironmentType.lexer
-  valueTable: Map<string, Value>
+  valueTable: Map<string, VObject>
 }
 
 export interface BlockEnvironment {
   type: EnvironmentType.block
-  valueTable: Map<string, Value>
+  valueTable: Map<string, VObject>
 }
 
 export type Environment =

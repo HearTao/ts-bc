@@ -26,3 +26,9 @@ export enum OpCode {
   Ret,
   Call
 }
+
+export interface OpValue {
+  value: number
+}
+
+export interface Label extends OpValue {}
