@@ -77,8 +77,8 @@ export class JSObject extends VObject {
   private rc: number = 0
 
   constructor (
-    private properties: Map<string | number, VObject> = new Map(),
-    private prototype: JSObject | JSNull = JSNull.instance
+    public properties: Map<string | number, VObject> = new Map(),
+    public prototype: JSObject | JSNull = JSNull.instance
   ) {
     super()
   }
@@ -215,13 +215,30 @@ export class JSFunction extends JSObject {
     super()
   }
 
+  isNative (): this is JSNativeFunction {
+    return false
+  }
+
   get type() {
     return ObjectType.Function
   }
 }
 
-export class JSBuiltinFunction extends JSFunction {
-  
+export class JSNativeFunction extends JSFunction {
+  constructor (
+    public name: JSString,
+    public func: (...args: VObject[]) => VObject
+  ) {
+    super(name, 0, new Map())
+  }
+
+  isNative ():this is JSNativeFunction {
+    return true
+  }
+
+  apply (args: VObject[]) {
+    return this.func.apply(null, args)
+  }
 }
 
 export class JSArray extends JSObject {

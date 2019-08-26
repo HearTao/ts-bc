@@ -271,6 +271,16 @@ export default class VirtualMachine {
             throw new Error('is not callable')
           }
 
+          if (callee.isNative()) {
+            const args: VObject[] = []
+            for (let i = 0; i < length.asNumber().value; ++i) {
+              args.push(this.popStack())
+            }
+
+            this.stack.push(callee.apply(args))
+            break
+          }
+
           const stackFrame: StackFrame = {
             ret: this.cur,
             entry: this.stack.length,
