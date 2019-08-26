@@ -49,12 +49,39 @@ export function gen(code: string): [(OpCode | Value)[], Value[]] {
       case ts.SyntaxKind.CallExpression:
         visitCallExpression(<ts.CallExpression>node)
         break
+      case ts.SyntaxKind.ReturnStatement:
+        visitReturnStatement(<ts.ReturnStatement>node)
+        break
+      case ts.SyntaxKind.Parameter:
+        visitParameter(<ts.ParameterDeclaration>node)
+        break
       default:
         ts.forEachChild(node, visitor)
     }
   }
 
+  function visitParameter(param: ts.ParameterDeclaration) {
+    if (!ts.isIdentifier(param.name)) {
+      throw new Error('not supported')
+    }
+
+    op.push(OpCode.Push)
+    op.push({ value: param.name.text})
+    op.push(OpCode.Def)
+  }
+
+  function visitReturnStatement(ret: ts.ReturnStatement) {
+    if (!ret.expression) {
+      throw new Error('return must have expr')
+    }
+    visitor(ret.expression)
+    op.push(OpCode.Ret)
+  }
+
   function visitCallExpression(call: ts.CallExpression) {
+    call.arguments.forEach(visitor)
+    op.push(OpCode.Push)
+    op.push({ value: call.arguments.length })
     visitor(call.expression)
     op.push(OpCode.Call)
   }
@@ -67,17 +94,19 @@ export function gen(code: string): [(OpCode | Value)[], Value[]] {
     op.push(label2)
 
     label1.value = op.length
-    op.push(OpCode.EnterLexerScope)
+    func.parameters.forEach(visitor)
     func.body!.statements.forEach(visitor)
+
+    op.push(OpCode.Push)
+    op.push({ value: 0 })
     op.push(OpCode.Ret)
-    op.push(OpCode.ExitLexerScope)
 
     label2.value = op.length
 
     op.push(OpCode.Push)
-    op.push({ value: (func.name as ts.Identifier).text })
-    op.push(OpCode.Push)
     op.push(label1)
+    op.push(OpCode.Push)
+    op.push({ value: (func.name as ts.Identifier).text })
     op.push(OpCode.Def)
   }
 
@@ -119,12 +148,12 @@ export function gen(code: string): [(OpCode | Value)[], Value[]] {
     variable: ts.VariableDeclaration
   ) {
     if (!variable.initializer) {
-      throw new Error('not supported')
+      return
     }
 
+    visitor(variable.initializer)
     op.push(OpCode.Push)
     op.push({ value: (variable.name as ts.Identifier).text })
-    visitor(variable.initializer)
 
     switch (type) {
       case EnvironmentType.block:
@@ -140,9 +169,7 @@ export function gen(code: string): [(OpCode | Value)[], Value[]] {
     switch (binary.operatorToken.kind) {
       case ts.SyntaxKind.EqualsToken:
       case ts.SyntaxKind.PlusEqualsToken:
-        visitAssignmentExpression(<
-          ts.AssignmentExpression<ts.AssignmentOperatorToken>
-        >binary)
+        visitAssignmentExpression(<ts.AssignmentExpression<ts.AssignmentOperatorToken>>binary)
         return
     }
 
@@ -167,6 +194,12 @@ export function gen(code: string): [(OpCode | Value)[], Value[]] {
         break
       case ts.SyntaxKind.GreaterThanToken:
         op.push(OpCode.GT)
+        break
+      case ts.SyntaxKind.EqualsEqualsEqualsToken:
+        op.push(OpCode.StrictEQ)
+        break
+      case ts.SyntaxKind.ExclamationEqualsEqualsToken:
+        op.push(OpCode.StrictNEQ)
         break
       default:
         throw new Error('not supported')

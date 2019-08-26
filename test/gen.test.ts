@@ -135,6 +135,34 @@ test(`should work with call`, () => {
   run(code)
 })
 
+
+test(`should work with return`, () => {
+  const code = `
+  function f() { return 42 }
+  var a = f()
+  a;
+`
+  run(code)
+})
+
+test(`should work with args`, () => {
+  const code = `
+  function f(a) { return 42 + a }
+  var a = f(1)
+  a;
+`
+  run(code)
+})
+
+test(`should work with recu`, () => {
+  const code = `
+  function f(p) { return p === 0 ? p : p + f(p - 1) }
+  var a = f(3)
+  a;
+`
+  run(code)
+})
+
 test(`should work with step exec`, () => {
   const code = '0 ? 2 : 0 ? 3 : 4'
   stepRun(code)

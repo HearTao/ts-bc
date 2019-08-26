@@ -8,6 +8,8 @@ export enum OpCode {
 
   LT,
   GT,
+  StrictEQ,
+  StrictNEQ,
 
   Push,
   Def,
@@ -20,8 +22,6 @@ export enum OpCode {
 
   EnterBlockScope,
   ExitBlockScope,
-  EnterLexerScope,
-  ExitLexerScope,
 
   Ret,
   Call

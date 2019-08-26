@@ -48,5 +48,6 @@ export type Environment =
 
 export interface StackFrame {
   ret: number
+  entry: number
   environments: LexerEnvironment | GlobalEnvironment
 }
