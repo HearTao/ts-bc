@@ -1,11 +1,11 @@
-import VirtualMachine from "../src/vm";
-import { gen } from "../src/gen";
-import { ExecResult } from "../src/types";
+import VirtualMachine from '../src/vm'
+import { gen } from '../src/gen'
+import { ExecResult } from '../src/types'
 
 function run(code: string) {
   const [op, value] = gen(code)
   const vm = new VirtualMachine(op, value)
-  
+
   expect(vm.exec().value.debugValue()).toStrictEqual(eval(code))
 }
 
@@ -104,7 +104,7 @@ test(`should crash with block scope`, () => {
 
   expect(() => {
     run(code)
-  }).toThrow("cannot find name b")
+  }).toThrow('cannot find name b')
 })
 
 test(`should work with assignment`, () => {
@@ -134,7 +134,6 @@ test(`should work with call`, () => {
 `
   run(code)
 })
-
 
 test(`should work with return`, () => {
   const code = `
@@ -212,7 +211,7 @@ test(`should work with dump and load`, () => {
   const code = '0 ? 2 : 0 ? 3 : 4'
   const [op, value] = gen(code)
   const vm = new VirtualMachine(op, value)
-  
+
   vm.exec(/* step */ true)
   const dump = vm.dump()
 

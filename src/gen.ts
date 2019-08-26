@@ -1,10 +1,8 @@
-/// <reference path="./typescript.d.ts"/>
-
 import * as ts from 'typescript'
 import { OpCode, OpValue, Label } from './opcode'
 import { EnvironmentType } from './types'
 import { JSString, VObject, JSNumber } from './value'
-import createVHost from './vhost'
+import createVHost from 'ts-ez-host'
 
 interface LexerContext {
   locals?: ts.SymbolTable
