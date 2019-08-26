@@ -26,6 +26,14 @@ export abstract class VObject {
     return this.type === ObjectType.Boolean
   }
 
+  isNull(): this is JSNull {
+    return false
+  }
+
+  isUndefined(): this is JSUndefined {
+    return false
+  }
+
   isPrimitive(): this is JSPrimitive {
     return this.isNumber() || this.isBoolean() || this.isString()
   }
@@ -68,7 +76,14 @@ export abstract class JSPrimitive extends VObject {
 export abstract class JSObject extends VObject {
   private rc: number = 0
 
-  public debugValue(): any {
+  constructor (
+    private properties: Map<string | number, VObject> = new Map(),
+    private prototype: JSObject | JSNull = JSNull.instance
+  ) {
+    super()
+  }
+
+  debugValue(): any {
     return this
   }
 
@@ -87,6 +102,16 @@ export abstract class JSObject extends VObject {
   toArray(): JSArray {
     throw new Error('invalid cast')
   }
+
+  get (key: JSString | JSNumber): VObject | JSUndefined {
+    if (this.properties.has(key.value)) {
+      return this.properties.get(key.value)!
+    }
+    if (!this.prototype.isNull()) {
+      return this.prototype.get(key)
+    }
+    return JSUndefined.instance
+  }
 }
 
 export class JSValue extends VObject {
@@ -94,11 +119,11 @@ export class JSValue extends VObject {
     super()
   }
 
-  public debugValue() {
+  debugValue() {
     return this.ref.debugValue()
   }
 
-  public get type() {
+  get type() {
     return ObjectType.Value
   }
 }
@@ -108,7 +133,7 @@ export class JSNumber extends JSPrimitive {
     super()
   }
 
-  public get type() {
+  get type() {
     return ObjectType.Number
   }
 
@@ -122,7 +147,7 @@ export class JSString extends JSPrimitive {
     super()
   }
 
-  public get type() {
+  get type() {
     return ObjectType.String
   }
 }
@@ -132,7 +157,7 @@ export class JSBoolean extends JSPrimitive {
     super()
   }
 
-  public get type() {
+  get type() {
     return ObjectType.Boolean
   }
 
@@ -144,29 +169,37 @@ export class JSBoolean extends JSPrimitive {
 export class JSUndefined extends JSPrimitive {
   value: undefined = undefined
 
-  public get type() {
+  get type() {
     return ObjectType.Undefined
+  }
+
+  isUndefined(): this is JSUndefined {
+    return true
   }
 
   toBoolean() {
     return new JSBoolean(false)
   }
 
-  public static instance = new JSUndefined()
+  static instance = new JSUndefined()
 }
 
 export class JSNull extends JSPrimitive {
   value: null = null
 
-  public get type() {
+  get type() {
     return ObjectType.Null
+  }
+
+  isNull(): this is JSNull {
+    return true
   }
 
   toBoolean() {
     return new JSBoolean(false)
   }
 
-  public static instance = new JSNull()
+  static instance = new JSNull()
 }
 
 export class JSFunction extends JSObject {
@@ -178,13 +211,13 @@ export class JSFunction extends JSObject {
     super()
   }
 
-  public get type() {
+  get type() {
     return ObjectType.Function
   }
 }
 
 export class JSArray extends JSObject {
-  public get type() {
+  get type() {
     return ObjectType.Array
   }
 
@@ -192,18 +225,18 @@ export class JSArray extends JSObject {
     super()
   }
 
-  public get(idx: number) {
-    if (idx < 0 || idx >= this.items.length) {
+  get(idx: JSNumber) {
+    if (idx.value < 0 || idx.value >= this.items.length) {
       throw new Error('index access out of range')
     }
-    return this.items[idx]
+    return this.items[idx.value]
   }
 
   toArray() {
     return this
   }
 
-  public debugValue() {
+  debugValue() {
     return this.items
   }
 }

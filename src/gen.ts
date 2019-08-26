@@ -3,6 +3,7 @@ import { OpCode, OpValue, Label } from './opcode'
 import { EnvironmentType } from './types'
 import { JSString, VObject, JSNumber } from './value'
 import createVHost from 'ts-ez-host'
+import { assertNever } from './utils';
 
 interface LexerContext {
   locals?: ts.SymbolTable
@@ -39,6 +40,9 @@ export function gen(code: string): [(OpCode | OpValue)[], VObject[]] {
       case ts.SyntaxKind.NumericLiteral:
         visitNumericLiteral(<ts.NumericLiteral>node)
         break
+      case ts.SyntaxKind.StringLiteral:
+        visitStringLiteral(<ts.StringLiteral>node)
+        break;
       case ts.SyntaxKind.BinaryExpression:
         visitBinaryExpression(<ts.BinaryExpression>node)
         break
@@ -81,6 +85,9 @@ export function gen(code: string): [(OpCode | OpValue)[], VObject[]] {
       case ts.SyntaxKind.ArrayLiteralExpression:
         visitArrayLiteralExpression(<ts.ArrayLiteralExpression>node)
         break
+      case ts.SyntaxKind.ObjectLiteralExpression:
+        visitObjectLiteralExpression(<ts.ObjectLiteralExpression>node)
+        break;
       default:
         ts.forEachChild(node, visitor)
     }
@@ -98,6 +105,29 @@ export function gen(code: string): [(OpCode | OpValue)[], VObject[]] {
     value.push(v)
     op.push(OpCode.Const)
     op.push({ value: value.length - 1 })
+  }
+
+  function visitObjectLiteralExpression(obj: ts.ObjectLiteralExpression) {
+    obj.properties.forEach(prop => {
+      if (ts.isPropertyAssignment(prop)) {
+        visitor(prop.initializer)
+        
+        switch (prop.name.kind) {
+          case ts.SyntaxKind.Identifier:
+            visitLeftHandSideExpression(prop.name)
+            break;
+          case ts.SyntaxKind.ComputedPropertyName:
+          case ts.SyntaxKind.StringLiteral:
+          case ts.SyntaxKind.NumericLiteral:
+            visitor(prop.name)
+            break;
+          default:
+            assertNever(prop.name)
+        } 
+      }
+    })
+    op.push(OpCode.CreateObject)
+    op.push({ value: obj.properties.length })
   }
 
   function visitArrayLiteralExpression(arr: ts.ArrayLiteralExpression) {
@@ -184,6 +214,10 @@ export function gen(code: string): [(OpCode | OpValue)[], VObject[]] {
     pushConst(new JSNumber(+node.text))
   }
 
+  function visitStringLiteral(node: ts.StringLiteral) {
+    pushConst(new JSString(node.text))
+  }
+
   function visitIdentifier(id: ts.Identifier) {
     pushConst(new JSString(id.text))
     op.push(OpCode.Load)
@@ -236,9 +270,7 @@ export function gen(code: string): [(OpCode | OpValue)[], VObject[]] {
     switch (binary.operatorToken.kind) {
       case ts.SyntaxKind.EqualsToken:
       case ts.SyntaxKind.PlusEqualsToken:
-        visitAssignmentExpression(<
-          ts.AssignmentExpression<ts.AssignmentOperatorToken>
-        >binary)
+        visitAssignmentExpression(binary as ts.AssignmentExpression<ts.AssignmentOperatorToken>)
         return
     }
 

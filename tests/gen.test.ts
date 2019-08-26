@@ -161,6 +161,17 @@ test(`should work with array`, () => {
   run(code)
 })
 
+test(`should work with object literal`, () => {
+  const code = `
+    var a = {
+      a: 1,
+      'b': 2,
+      ['c']: 3
+    };
+    [a['a'], a['b'], a['c']]
+  `
+})
+
 test(`should work with recu`, () => {
   const code = `
   function f(p) { return p === 0 ? p : p + f(p - 1) }

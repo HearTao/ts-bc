@@ -6,3 +6,7 @@ export function assertOPValue(v: OpCode | OpValue): number {
   }
   return v.value
 }
+
+export function assertNever(v: never): never {
+  return undefined!
+}

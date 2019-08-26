@@ -302,8 +302,8 @@ export default class VirtualMachine {
         case OpCode.IndexAccess: {
           const idx = this.popStack()
           const obj = this.popStack()
-          if (obj.isObject() && obj.isArray() && idx.isNumber()) {
-            this.stack.push(obj.get(idx.value))
+          if (obj.isObject() && (idx.isNumber() || idx.isString())) {
+            this.stack.push(obj.get(idx))
           } else {
             throw new Error('not supported index access')
           }
@@ -345,6 +345,11 @@ export default class VirtualMachine {
 
           upValues.forEach(name => upValue.set(name, this.lookup(name)))
           break
+        }
+
+        case OpCode.CreateObject: {
+          
+          break;
         }
 
         case OpCode.Null: {
