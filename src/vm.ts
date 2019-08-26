@@ -6,11 +6,13 @@ import {
   DoneResult,
   ExecResult,
   Environment,
-  EnvironmentType
+  EnvironmentType,
+  StackFrame
 } from './types'
 
 export default class VirtualMachine {
   private stack: Value[] = []
+  private frames: StackFrame[] = []
   private environments: Environment[] = [
     {
       type: EnvironmentType.global,
@@ -212,6 +214,39 @@ export default class VirtualMachine {
 
         case OpCode.ExitBlockScope: {
           this.environments.pop()
+          break
+        }
+
+        case OpCode.Call: {
+          const call = this.popStack()
+
+          const stackFrame: StackFrame = {
+            ret: this.cur,
+            environments: {
+              type: EnvironmentType.lexer,
+              valueTable: new Map()
+            }
+          }
+
+          this.frames.push(stackFrame)
+          this.cur = assertNumberValue(call)
+          break
+        }
+
+        case OpCode.EnterLexerScope: {
+          this.environments.push(
+            this.frames[this.frames.length - 1].environments
+          )
+          break
+        }
+
+        case OpCode.ExitLexerScope: {
+          this.environments.pop()
+          break
+        }
+
+        case OpCode.Ret: {
+          this.cur = this.frames[this.frames.length - 1].ret
           break
         }
 

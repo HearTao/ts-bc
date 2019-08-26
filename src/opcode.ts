@@ -19,5 +19,10 @@ export enum OpCode {
   JumpIfFalse,
 
   EnterBlockScope,
-  ExitBlockScope
+  ExitBlockScope,
+  EnterLexerScope,
+  ExitLexerScope,
+
+  Ret,
+  Call
 }

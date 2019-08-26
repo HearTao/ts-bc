@@ -1,7 +1,7 @@
 import * as ts from 'typescript'
 import { OpCode } from './opcode'
 import { Value } from './value'
-import { EnvironmentType } from './types'
+import { EnvironmentType, StackFrame } from './types'
 
 export function gen(code: string): [(OpCode | Value)[], Value[]] {
   const op: (OpCode | Value)[] = []
@@ -43,9 +43,42 @@ export function gen(code: string): [(OpCode | Value)[], Value[]] {
       case ts.SyntaxKind.Block:
         visitBlock(<ts.Block>node)
         break
+      case ts.SyntaxKind.FunctionDeclaration:
+        visitFunctionDeclaration(<ts.FunctionDeclaration>node)
+        break
+      case ts.SyntaxKind.CallExpression:
+        visitCallExpression(<ts.CallExpression>node)
+        break
       default:
         ts.forEachChild(node, visitor)
     }
+  }
+
+  function visitCallExpression(call: ts.CallExpression) {
+    visitor(call.expression)
+    op.push(OpCode.Call)
+  }
+
+  function visitFunctionDeclaration(func: ts.FunctionDeclaration) {
+    const label1: Value = { value: 0 }
+    const label2: Value = { value: 0 }
+
+    op.push(OpCode.Jump)
+    op.push(label2)
+
+    label1.value = op.length
+    op.push(OpCode.EnterLexerScope)
+    func.body!.statements.forEach(visitor)
+    op.push(OpCode.Ret)
+    op.push(OpCode.ExitLexerScope)
+
+    label2.value = op.length
+
+    op.push(OpCode.Push)
+    op.push({ value: (func.name as ts.Identifier).text })
+    op.push(OpCode.Push)
+    op.push(label1)
+    op.push(OpCode.Def)
   }
 
   function visitBlock(block: ts.Block) {

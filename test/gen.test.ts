@@ -125,6 +125,16 @@ test(`should work with add assignment`, () => {
   run(code)
 })
 
+test(`should work with call`, () => {
+  const code = `
+  var a = 0;
+  function f() { a = 1 }
+  f()
+  a;
+`
+  run(code)
+})
+
 test(`should work with step exec`, () => {
   const code = '0 ? 2 : 0 ? 3 : 4'
   stepRun(code)
