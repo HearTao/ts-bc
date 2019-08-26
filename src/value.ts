@@ -46,21 +46,21 @@ export abstract class VObject {
     return false
   }
 
-  toNumber() {
+  asNumber() {
     if (this.isNumber()) {
       return this
     }
     throw new Error('invalid cast')
   }
 
-  toString() {
+  asString() {
     if (this.isString()) {
       return this
     }
     throw new Error('invalid cast')
   }
 
-  toBoolean(): JSBoolean {
+  asBoolean(): JSBoolean {
     throw new Error('invalid cast')
   }
 }
@@ -73,7 +73,7 @@ export abstract class JSPrimitive extends VObject {
   }
 }
 
-export abstract class JSObject extends VObject {
+export class JSObject extends VObject {
   private rc: number = 0
 
   constructor (
@@ -81,6 +81,10 @@ export abstract class JSObject extends VObject {
     private prototype: JSObject | JSNull = JSNull.instance
   ) {
     super()
+  }
+
+  get type() {
+    return ObjectType.Object
   }
 
   debugValue(): any {
@@ -99,7 +103,7 @@ export abstract class JSObject extends VObject {
     return this.type === ObjectType.Function
   }
 
-  toArray(): JSArray {
+  asArray(): JSArray {
     throw new Error('invalid cast')
   }
 
@@ -137,7 +141,7 @@ export class JSNumber extends JSPrimitive {
     return ObjectType.Number
   }
 
-  toBoolean() {
+  asBoolean() {
     return new JSBoolean(!!this.value)
   }
 }
@@ -161,7 +165,7 @@ export class JSBoolean extends JSPrimitive {
     return ObjectType.Boolean
   }
 
-  toBoolean() {
+  asBoolean() {
     return this
   }
 }
@@ -177,7 +181,7 @@ export class JSUndefined extends JSPrimitive {
     return true
   }
 
-  toBoolean() {
+  asBoolean() {
     return new JSBoolean(false)
   }
 
@@ -195,7 +199,7 @@ export class JSNull extends JSPrimitive {
     return true
   }
 
-  toBoolean() {
+  asBoolean() {
     return new JSBoolean(false)
   }
 
@@ -232,11 +236,11 @@ export class JSArray extends JSObject {
     return this.items[idx.value]
   }
 
-  toArray() {
+  asArray() {
     return this
   }
 
   debugValue() {
-    return this.items
+    return this.items.map(x => x.debugValue())
   }
 }

@@ -170,6 +170,7 @@ test(`should work with object literal`, () => {
     };
     [a['a'], a['b'], a['c']]
   `
+  run(code)
 })
 
 test(`should work with recu`, () => {

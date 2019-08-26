@@ -16,7 +16,8 @@ import {
   JSUndefined,
   JSNull,
   JSFunction,
-  JSString
+  JSString,
+  JSObject
 } from './value'
 
 export default class VirtualMachine {
@@ -133,7 +134,7 @@ export default class VirtualMachine {
           const right = this.popStack()
           const left = this.popStack()
           this.stack.push(
-            new JSNumber(left.toNumber().value + right.toNumber().value)
+            new JSNumber(left.asNumber().value + right.asNumber().value)
           )
           break
         }
@@ -141,7 +142,7 @@ export default class VirtualMachine {
           const right = this.popStack()
           const left = this.popStack()
           this.stack.push(
-            new JSNumber(left.toNumber().value - right.toNumber().value)
+            new JSNumber(left.asNumber().value - right.asNumber().value)
           )
           break
         }
@@ -149,7 +150,7 @@ export default class VirtualMachine {
           const right = this.popStack()
           const left = this.popStack()
           this.stack.push(
-            new JSNumber(left.toNumber().value * right.toNumber().value)
+            new JSNumber(left.asNumber().value * right.asNumber().value)
           )
           break
         }
@@ -157,7 +158,7 @@ export default class VirtualMachine {
           const right = this.popStack()
           const left = this.popStack()
           this.stack.push(
-            new JSNumber(left.toNumber().value / right.toNumber().value)
+            new JSNumber(left.asNumber().value / right.asNumber().value)
           )
           break
         }
@@ -166,7 +167,7 @@ export default class VirtualMachine {
           const right = this.popStack()
           const left = this.popStack()
           this.stack.push(
-            new JSBoolean(left.toNumber().value < right.toNumber().value)
+            new JSBoolean(left.asNumber().value < right.asNumber().value)
           )
           break
         }
@@ -175,7 +176,7 @@ export default class VirtualMachine {
           const right = this.popStack()
           const left = this.popStack()
           this.stack.push(
-            new JSBoolean(left.toNumber().value > right.toNumber().value)
+            new JSBoolean(left.asNumber().value > right.asNumber().value)
           )
           break
         }
@@ -184,7 +185,7 @@ export default class VirtualMachine {
           const right = this.popStack()
           const left = this.popStack()
           this.stack.push(
-            new JSBoolean(left.toNumber().value === right.toNumber().value)
+            new JSBoolean(left.asNumber().value === right.asNumber().value)
           )
           break
         }
@@ -193,7 +194,7 @@ export default class VirtualMachine {
           const right = this.popStack()
           const left = this.popStack()
           this.stack.push(
-            new JSBoolean(left.toNumber().value !== right.toNumber().value)
+            new JSBoolean(left.asNumber().value !== right.asNumber().value)
           )
           break
         }
@@ -206,7 +207,7 @@ export default class VirtualMachine {
         case OpCode.JumpIfFalse: {
           const cond = this.popStack()
           const pos = this.popCode()
-          if (!cond.toBoolean().value) {
+          if (!cond.asBoolean().value) {
             this.cur = pos
           }
           break
@@ -219,25 +220,25 @@ export default class VirtualMachine {
         case OpCode.Def: {
           const name = this.popStack()
           const initializer = this.popStack()
-          this.define(name.toString().value, initializer, EnvironmentType.lexer)
+          this.define(name.asString().value, initializer, EnvironmentType.lexer)
           break
         }
         case OpCode.DefBlock: {
           const name = this.popStack()
           const initializer = this.popStack()
-          this.define(name.toString().value, initializer, EnvironmentType.block)
+          this.define(name.asString().value, initializer, EnvironmentType.block)
           break
         }
         case OpCode.Load: {
           const name = this.popStack()
-          const value = this.lookup(name.toString().value)
+          const value = this.lookup(name.asString().value)
           this.stack.push(value)
           break
         }
         case OpCode.Set: {
           const name = this.popStack()
           const value = this.popStack()
-          this.setValue(name.toString().value, value)
+          this.setValue(name.asString().value, value)
           break
         }
 
@@ -280,7 +281,7 @@ export default class VirtualMachine {
           this.cur = callee.pos
 
           const args: VObject[] = []
-          for (let i = 0; i < length.toNumber().value; ++i) {
+          for (let i = 0; i < length.asNumber().value; ++i) {
             args.push(this.popStack())
           }
 
@@ -331,16 +332,16 @@ export default class VirtualMachine {
           const upValues: string[] = []
           const upValue: Map<string, VObject> = new Map()
 
-          for (let i = 0; i < upValueCount.toNumber().value; ++i) {
-            upValues.push(this.popStack().toString().value)
+          for (let i = 0; i < upValueCount.asNumber().value; ++i) {
+            upValues.push(this.popStack().asString().value)
           }
 
           const func = new JSFunction(
-            name.toString(),
-            pos.toNumber().value,
+            name.asString(),
+            pos.asNumber().value,
             upValue
           )
-          this.define(name.toString().value, func, EnvironmentType.lexer)
+          this.define(name.asString().value, func, EnvironmentType.lexer)
           this.stack.push(func)
 
           upValues.forEach(name => upValue.set(name, this.lookup(name)))
@@ -348,8 +349,19 @@ export default class VirtualMachine {
         }
 
         case OpCode.CreateObject: {
-          
-          break;
+          const len = this.popCode()
+          const properties: Map<string | number, VObject> = new Map()
+          for (let i = 0; i < len; ++i) {
+            const name = this.popStack()
+            const initializer = this.popStack()
+            if (name.isString() || name.isNumber()) {
+              properties.set(name.value, initializer)
+            } else {
+              throw new Error('invalid object key')
+            }
+          }
+          this.stack.push(new JSObject(properties))
+          break
         }
 
         case OpCode.Null: {

@@ -2,9 +2,12 @@ import VirtualMachine from './vm'
 import { gen } from './gen'
 
 const code = `
-function f(p) { return p === 0 ? p : p + f(p - 1) }
-var a = f(3)
-a;`
+var a = {
+    a: 1,
+    'b': 2,
+    ['c']: 3
+  };
+  [a['a'], a['b'], a['c']];`
 const [op, value] = gen(code)
 
 const vm = new VirtualMachine(op, value)
