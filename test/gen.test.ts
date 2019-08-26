@@ -6,7 +6,7 @@ function run(code: string) {
   const [op, value] = gen(code)
   const vm = new VirtualMachine(op, value)
   
-  expect(vm.exec().value.debugValue()).toBe(eval(code))
+  expect(vm.exec().value.debugValue()).toStrictEqual(eval(code))
 }
 
 function stepRun(code: string) {
@@ -151,6 +151,14 @@ test(`should work with args`, () => {
   var a = f(1)
   a;
 `
+  run(code)
+})
+
+test(`should work with array`, () => {
+  const code = `
+    var a = [1, 2, 3];
+    a[0]
+  `
   run(code)
 })
 

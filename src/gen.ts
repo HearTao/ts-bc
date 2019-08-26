@@ -55,6 +55,12 @@ export function gen(code: string): [(OpCode | OpValue)[], VObject[]] {
       case ts.SyntaxKind.Parameter:
         visitParameter(<ts.ParameterDeclaration>node)
         break
+      case ts.SyntaxKind.ElementAccessExpression:
+        visitElementAccessExpression(<ts.ElementAccessExpression>node)
+        break;
+      case ts.SyntaxKind.ArrayLiteralExpression:
+        visitArrayLiteralExpression(<ts.ArrayLiteralExpression>node)
+        break
       default:
         ts.forEachChild(node, visitor)
     }
@@ -72,6 +78,18 @@ export function gen(code: string): [(OpCode | OpValue)[], VObject[]] {
     value.push(v)
     op.push(OpCode.Const)
     op.push({ value: value.length - 1 })
+  }
+
+  function visitArrayLiteralExpression(arr: ts.ArrayLiteralExpression) {
+    arr.elements.forEach(visitor)
+    op.push(OpCode.CreateArray)
+    op.push({ value: arr.elements.length })
+  }
+
+  function visitElementAccessExpression(elementAccess: ts.ElementAccessExpression) {
+    visitor(elementAccess.expression)
+    visitor(elementAccess.argumentExpression)
+    op.push(OpCode.IndexAccess)
   }
 
   function visitParameter(param: ts.ParameterDeclaration) {
@@ -108,6 +126,10 @@ export function gen(code: string): [(OpCode | OpValue)[], VObject[]] {
 
     updateLabel(label1)
     func.parameters.forEach(visitor)
+
+    pushConst(new JSString('arguments'))
+    op.push(OpCode.Def)
+
     func.body!.statements.forEach(visitor)
 
     op.push(OpCode.Push)

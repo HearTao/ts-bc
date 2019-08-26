@@ -8,7 +8,7 @@ import {
   EnvironmentType,
   StackFrame
 } from './types'
-import { VObject, JSNumber, JSBoolean } from './value'
+import { VObject, JSNumber, JSBoolean, JSArray } from './value'
 
 export default class VirtualMachine {
   private stack: VObject[] = []
@@ -259,6 +259,7 @@ export default class VirtualMachine {
             args.push(this.popStack())
           }
 
+          this.stack.push(new JSArray(args))
           args.forEach(x => this.stack.push(x))
           break
         }
@@ -270,6 +271,31 @@ export default class VirtualMachine {
           this.stack = this.stack.slice(0, frame.entry)
           this.stack.push(ret)
           this.environments.pop()
+          break
+        }
+
+        case OpCode.IndexAccess: {
+          const idx = this.popStack()
+          const obj = this.popStack()
+          if (obj.isObject() && obj.isArray() && idx.isNumber()) {
+            this.stack.push(obj.get(idx.value))
+          } else {
+            throw new Error('not supported index access')
+          }
+          break
+        }
+
+        case OpCode.CreateArray: {
+          const len = this.popCode()
+          const elements: VObject[] = []
+          for (let i = 0; i < len; ++i) {
+            elements.push(this.popStack())
+          }
+          const arr = new Array<VObject>()
+          for (let i = 0; i < len; ++i) {
+            arr.push(elements.pop()!)
+          }
+          this.stack.push(new JSArray(arr))
           break
         }
 

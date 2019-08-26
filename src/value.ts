@@ -28,12 +28,12 @@ export abstract class VObject {
     return this.isNumber() || this.isBoolean() || this.isString()
   }
 
-  isValue() {
-    return this.type === ObjectType.Value
+  isValue(): this is JSValue {
+    return false
   }
 
   isObject(): this is JSObject {
-    return this.type === ObjectType.Object
+    return false
   }
 
   toNumber() {
@@ -66,8 +66,24 @@ export abstract class JSPrimitive extends VObject {
 export abstract class JSObject extends VObject {
   private rc: number = 0
 
-  public debugValue() {
+  public debugValue(): any {
     return this
+  }
+
+  isObject(): this is JSObject {
+    return true
+  }
+
+  isArray(): this is JSArray {
+    return this.type === ObjectType.Array
+  }
+
+  isFunction(): this is JSFunction {
+    return this.type === ObjectType.Function
+  }
+
+  toArray (): JSArray {
+    throw new Error('invalid cast')
   }
 }
 
@@ -140,5 +156,20 @@ export class JSArray extends JSObject {
 
   constructor(private items: VObject[]) {
     super()
+  }
+
+  public get (idx: number) {
+    if (idx < 0 || idx >= this.items.length) {
+      throw new Error('index access out of range')
+    }
+    return this.items[idx]
+  }
+
+  toArray () {
+    return this
+  }
+
+  public debugValue() {
+    return this.items
   }
 }
