@@ -8,7 +8,16 @@ import {
   EnvironmentType,
   StackFrame
 } from './types'
-import { VObject, JSNumber, JSBoolean } from './value'
+import {
+  VObject,
+  JSNumber,
+  JSBoolean,
+  JSArray,
+  JSUndefined,
+  JSNull,
+  JSFunction,
+  JSString
+} from './value'
 
 export default class VirtualMachine {
   private stack: VObject[] = []
@@ -46,6 +55,11 @@ export default class VirtualMachine {
       if (env.valueTable.has(name)) {
         return env.valueTable.get(name)!
       }
+      if (env.type === EnvironmentType.lexer) {
+        if (env.upValue.has(name)) {
+          return env.upValue.get(name)!
+        }
+      }
     }
     throw new Error('cannot find name ' + name)
   }
@@ -70,6 +84,12 @@ export default class VirtualMachine {
       if (env.valueTable.has(name)) {
         env.valueTable.set(name, value)
         return
+      }
+      if (env.type === EnvironmentType.lexer) {
+        if (env.upValue.has(name)) {
+          env.upValue.set(name, value)
+          return
+        }
       }
     }
     throw new Error('cannot find name ' + name)
@@ -235,15 +255,20 @@ export default class VirtualMachine {
         }
 
         case OpCode.Call: {
-          const call = this.popStack()
+          const callee = this.popStack()
           const length = this.popStack()
+
+          if (!callee.isObject() || !callee.isFunction()) {
+            throw new Error('is not callable')
+          }
 
           const stackFrame: StackFrame = {
             ret: this.cur,
             entry: this.stack.length,
             environments: {
               type: EnvironmentType.lexer,
-              valueTable: new Map()
+              valueTable: new Map(),
+              upValue: callee.upvalue
             }
           }
 
@@ -252,13 +277,14 @@ export default class VirtualMachine {
             this.frames[this.frames.length - 1].environments
           )
 
-          this.cur = call.toNumber().value
+          this.cur = callee.pos
 
           const args: VObject[] = []
           for (let i = 0; i < length.toNumber().value; ++i) {
             args.push(this.popStack())
           }
 
+          this.stack.push(new JSArray(args))
           args.forEach(x => this.stack.push(x))
           break
         }
@@ -270,6 +296,64 @@ export default class VirtualMachine {
           this.stack = this.stack.slice(0, frame.entry)
           this.stack.push(ret)
           this.environments.pop()
+          break
+        }
+
+        case OpCode.IndexAccess: {
+          const idx = this.popStack()
+          const obj = this.popStack()
+          if (obj.isObject() && obj.isArray() && idx.isNumber()) {
+            this.stack.push(obj.get(idx.value))
+          } else {
+            throw new Error('not supported index access')
+          }
+          break
+        }
+
+        case OpCode.CreateArray: {
+          const len = this.popCode()
+          const elements: VObject[] = []
+          for (let i = 0; i < len; ++i) {
+            elements.push(this.popStack())
+          }
+          const arr = new Array<VObject>()
+          for (let i = 0; i < len; ++i) {
+            arr.push(elements.pop()!)
+          }
+          this.stack.push(new JSArray(arr))
+          break
+        }
+
+        case OpCode.CreateFunction: {
+          const name = this.popStack()
+          const pos = this.popStack()
+          const upValueCount = this.popStack()
+          const upValues: string[] = []
+          const upValue: Map<string, VObject> = new Map()
+
+          for (let i = 0; i < upValueCount.toNumber().value; ++i) {
+            upValues.push(this.popStack().toString().value)
+          }
+
+          const func = new JSFunction(
+            name.toString(),
+            pos.toNumber().value,
+            upValue
+          )
+          this.define(name.toString().value, func, EnvironmentType.lexer)
+          this.stack.push(func)
+
+          upValues.forEach(name => upValue.set(name, this.lookup(name)))
+          break
+        }
+
+        case OpCode.Null: {
+          this.stack.push(JSNull.instance)
+          break
+        }
+
+        case OpCode.Undefined: {
+          this.stack.push(JSUndefined.instance)
           break
         }
 

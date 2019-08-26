@@ -5,7 +5,9 @@ export enum ObjectType {
   Object,
   Value,
   Function,
-  Array
+  Array,
+  Undefined,
+  Null
 }
 
 export abstract class VObject {
@@ -28,12 +30,12 @@ export abstract class VObject {
     return this.isNumber() || this.isBoolean() || this.isString()
   }
 
-  isValue() {
-    return this.type === ObjectType.Value
+  isValue(): this is JSValue {
+    return false
   }
 
   isObject(): this is JSObject {
-    return this.type === ObjectType.Object
+    return false
   }
 
   toNumber() {
@@ -56,7 +58,7 @@ export abstract class VObject {
 }
 
 export abstract class JSPrimitive extends VObject {
-  protected abstract get value(): string | number | boolean
+  protected abstract get value(): any
 
   public debugValue() {
     return this.value
@@ -66,8 +68,24 @@ export abstract class JSPrimitive extends VObject {
 export abstract class JSObject extends VObject {
   private rc: number = 0
 
-  public debugValue() {
+  public debugValue(): any {
     return this
+  }
+
+  isObject(): this is JSObject {
+    return true
+  }
+
+  isArray(): this is JSArray {
+    return this.type === ObjectType.Array
+  }
+
+  isFunction(): this is JSFunction {
+    return this.type === ObjectType.Function
+  }
+
+  toArray(): JSArray {
+    throw new Error('invalid cast')
   }
 }
 
@@ -123,8 +141,40 @@ export class JSBoolean extends JSPrimitive {
   }
 }
 
+export class JSUndefined extends JSPrimitive {
+  value: undefined = undefined
+
+  public get type() {
+    return ObjectType.Undefined
+  }
+
+  toBoolean() {
+    return new JSBoolean(false)
+  }
+
+  public static instance = new JSUndefined()
+}
+
+export class JSNull extends JSPrimitive {
+  value: null = null
+
+  public get type() {
+    return ObjectType.Null
+  }
+
+  toBoolean() {
+    return new JSBoolean(false)
+  }
+
+  public static instance = new JSNull()
+}
+
 export class JSFunction extends JSObject {
-  constructor(public pos: number, args: number) {
+  constructor(
+    public name: JSString,
+    public pos: number,
+    public upvalue: Map<string, VObject>
+  ) {
     super()
   }
 
@@ -140,5 +190,20 @@ export class JSArray extends JSObject {
 
   constructor(private items: VObject[]) {
     super()
+  }
+
+  public get(idx: number) {
+    if (idx < 0 || idx >= this.items.length) {
+      throw new Error('index access out of range')
+    }
+    return this.items[idx]
+  }
+
+  toArray() {
+    return this
+  }
+
+  public debugValue() {
+    return this.items
   }
 }

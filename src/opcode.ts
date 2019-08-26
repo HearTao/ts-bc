@@ -24,7 +24,16 @@ export enum OpCode {
   ExitBlockScope,
 
   Ret,
-  Call
+  Call,
+
+  Null,
+  Undefined,
+
+  CreateArray,
+  CreateFunction,
+  CreateObject,
+
+  IndexAccess
 }
 
 export interface OpValue {

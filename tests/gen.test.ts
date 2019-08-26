@@ -1,12 +1,12 @@
-import VirtualMachine from "../src/vm";
-import { gen } from "../src/gen";
-import { ExecResult } from "../src/types";
+import VirtualMachine from '../src/vm'
+import { gen } from '../src/gen'
+import { ExecResult } from '../src/types'
 
 function run(code: string) {
   const [op, value] = gen(code)
   const vm = new VirtualMachine(op, value)
-  
-  expect(vm.exec().value.debugValue()).toBe(eval(code))
+
+  expect(vm.exec().value.debugValue()).toStrictEqual(eval(code))
 }
 
 function stepRun(code: string) {
@@ -104,7 +104,7 @@ test(`should crash with block scope`, () => {
 
   expect(() => {
     run(code)
-  }).toThrow("cannot find name b")
+  }).toThrow('cannot find name b')
 })
 
 test(`should work with assignment`, () => {
@@ -135,7 +135,6 @@ test(`should work with call`, () => {
   run(code)
 })
 
-
 test(`should work with return`, () => {
   const code = `
   function f() { return 42 }
@@ -154,6 +153,14 @@ test(`should work with args`, () => {
   run(code)
 })
 
+test(`should work with array`, () => {
+  const code = `
+    var a = [1, 2, 3];
+    a[0]
+  `
+  run(code)
+})
+
 test(`should work with recu`, () => {
   const code = `
   function f(p) { return p === 0 ? p : p + f(p - 1) }
@@ -161,6 +168,38 @@ test(`should work with recu`, () => {
   a;
 `
   run(code)
+})
+
+test(`should work with scopes`, () => {
+  const code = `
+    var a = 0;
+    function foo () {
+      var a = 1;
+      var i = 0;
+      while (i < 1) {
+        let a = 2
+      }
+    }
+    a
+  `
+
+  run(code)
+})
+
+test(`should work with upvalue`, () => {
+  const code = `
+    function foo() {
+      var a = 0;
+      function bar () {
+        a += 1;
+        return a;
+      }
+      return bar;
+    }
+    var b = foo();
+    b();
+    b()
+  `
 })
 
 test(`should work with step exec`, () => {
@@ -172,7 +211,7 @@ test(`should work with dump and load`, () => {
   const code = '0 ? 2 : 0 ? 3 : 4'
   const [op, value] = gen(code)
   const vm = new VirtualMachine(op, value)
-  
+
   vm.exec(/* step */ true)
   const dump = vm.dump()
 
