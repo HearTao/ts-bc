@@ -2288,9 +2288,9 @@ minimist@~0.0.1:
   integrity sha1-3j+YVD2/lggr5IrRoMfNqDYwHc8=
 
 minipass@^2.2.1, minipass@^2.3.5:
-  version "2.3.5"
-  resolved "https://registry.yarnpkg.com/minipass/-/minipass-2.3.5.tgz#cacebe492022497f656b0f0f51e2682a9ed2d848"
-  integrity sha512-Gi1W4k059gyRbyVUZQ4mEqLm0YIUiGYfvxhF6SIlk3ui1WVxMTGfGdQ2SInh3PDrRTVvPKgULkpJtT4RH10+VA==
+  version "2.4.0"
+  resolved "https://registry.yarnpkg.com/minipass/-/minipass-2.4.0.tgz#38f0af94f42fb6f34d3d7d82a90e2c99cd3ff485"
+  integrity sha512-6PmOuSP4NnZXzs2z6rbwzLJu/c5gdzYg1mRI/WIYdx45iiX7T+a4esOzavD6V/KmBzAaopFSTZPZcUx73bqKWA==
   dependencies:
     safe-buffer "^5.1.2"
     yallist "^3.0.0"
@@ -3336,10 +3336,10 @@ trim-right@^1.0.1:
   resolved "https://registry.yarnpkg.com/trim-right/-/trim-right-1.0.1.tgz#cb2e1203067e0c8de1f614094b9fe45704ea6003"
   integrity sha1-yy4SAwZ+DI3h9hQJS5/kVwTqYAM=
 
-ts-ez-host@^0.0.5:
-  version "0.0.5"
-  resolved "https://registry.yarnpkg.com/ts-ez-host/-/ts-ez-host-0.0.5.tgz#391938a905bf6a731cbbf04a6ac878422acac460"
-  integrity sha512-PH/fOPM5zl0+93dysS2mGEXpaNeieptXqk3MNodZeCWms9xlDXVotg9qJiwN4xLGVbZgERYjshTIukBklmk4iQ==
+ts-ez-host@^0.0.6:
+  version "0.0.6"
+  resolved "https://registry.yarnpkg.com/ts-ez-host/-/ts-ez-host-0.0.6.tgz#23b720ab9dd9e89d4d784ab4cbc8a375f6c73bef"
+  integrity sha512-UKjbtY0x0OL/uce0Vl7bON6k5V4/zEWPIdH14j4qkp/dIlJ/HlqBZJaJ/KCk+UI2SwtkROE4SPZ/SMvVI9KOrQ==
 
 ts-jest@^24.0.2:
   version "24.0.2"
@@ -3387,9 +3387,9 @@ type-check@~0.3.2:
     prelude-ls "~1.1.2"
 
 typescript@^3.7.0-dev.20190822:
-  version "3.7.0-dev.20190822"
-  resolved "https://registry.yarnpkg.com/typescript/-/typescript-3.7.0-dev.20190822.tgz#7f61c7d6e2a18900c0a9e626ee5045ed78e8733f"
-  integrity sha512-j0W+28hZaIMvBxBDJ5lEj/vhIqGJIVVPeWQRbru8QzIQg71Pbz8hl+Bsj5ve049w6gms0UqDP4gix8K+aYNT+Q==
+  version "3.7.0-dev.20190827"
+  resolved "https://registry.yarnpkg.com/typescript/-/typescript-3.7.0-dev.20190827.tgz#323a7b00c818a3cebeb9015daaa98ae29b3c4b66"
+  integrity sha512-edAJZmM9KIiKED9U0NYJq/MFcxYfsB+lHjiJJFOEoo1imJLrkijbHQCn+ENLQBOdW+DEx8Oh+yAn/wLiRj57fw==
 
 uglify-js@^3.1.4:
   version "3.6.0"
