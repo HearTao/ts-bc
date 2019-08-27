@@ -19,7 +19,7 @@ import {
   JSString,
   JSObject
 } from './value'
-import { initPrototype } from './bom';
+import { initPrototype } from './bom'
 
 export default class VirtualMachine {
   private stack: VObject[] = []
@@ -34,7 +34,7 @@ export default class VirtualMachine {
     this.initGlobal()
   }
 
-  private initGlobal (){
+  private initGlobal() {
     const valueTable = new Map<string, VObject>()
     this.environments.push({
       type: EnvironmentType.global,
@@ -318,7 +318,7 @@ export default class VirtualMachine {
           break
         }
 
-        case OpCode.IndexAccess: {
+        case OpCode.PropAccess: {
           const idx = this.popStack()
           const obj = this.popStack()
           if (obj.isObject() && (idx.isNumber() || idx.isString())) {
@@ -380,6 +380,18 @@ export default class VirtualMachine {
           }
           this.stack.push(new JSObject(properties))
           break
+        }
+
+        case OpCode.PropAssignment: {
+          const obj = this.popStack()
+          const idx = this.popStack()
+          const value = this.popStack()
+          if (obj.isObject() && (idx.isNumber() || idx.isString())) {
+            obj.set(idx, value)
+          } else {
+            throw new Error('invalid object assignment')
+          }
+          break;
         }
 
         case OpCode.Null: {

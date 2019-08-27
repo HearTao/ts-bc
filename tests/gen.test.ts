@@ -173,6 +173,19 @@ test(`should work with object literal`, () => {
   run(code)
 })
 
+test(`should work with object property assignment`, () => {
+  const code = `
+    var a = {
+      a: 1,
+      'b': 'a',
+      ['c']: 'b'
+    };
+    a[a[a['c']]] = 2333;
+    a['a']
+  `
+  run(code)
+})
+
 test(`should work with recu`, () => {
   const code = `
   function f(p) { return p === 0 ? p : p + f(p - 1) }
@@ -229,7 +242,12 @@ test(`should work with Object.keys`, () => {
   const [op, value] = gen(code)
   const vm = new VirtualMachine(op, value)
 
-  expect(vm.exec().value.debugValue().sort()).toStrictEqual(eval(code).sort())
+  expect(
+    vm
+      .exec()
+      .value.debugValue()
+      .sort()
+  ).toStrictEqual(eval(code).sort())
 })
 
 test(`should work with step exec`, () => {

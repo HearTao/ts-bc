@@ -76,7 +76,7 @@ export abstract class JSPrimitive extends VObject {
 export class JSObject extends VObject {
   private rc: number = 0
 
-  constructor (
+  constructor(
     public properties: Map<string | number, VObject> = new Map(),
     public prototype: JSObject | JSNull = JSNull.instance
   ) {
@@ -107,7 +107,7 @@ export class JSObject extends VObject {
     throw new Error('invalid cast')
   }
 
-  get (key: JSString | JSNumber): VObject | JSUndefined {
+  get(key: JSString | JSNumber): VObject | JSUndefined {
     if (this.properties.has(key.value)) {
       return this.properties.get(key.value)!
     }
@@ -115,6 +115,11 @@ export class JSObject extends VObject {
       return this.prototype.get(key)
     }
     return JSUndefined.instance
+  }
+
+  set(key: JSString | JSNumber, value: VObject) {
+    this.properties.set(key.value, value)
+    return value
   }
 }
 
@@ -215,7 +220,7 @@ export class JSFunction extends JSObject {
     super()
   }
 
-  isNative (): this is JSNativeFunction {
+  isNative(): this is JSNativeFunction {
     return false
   }
 
@@ -225,18 +230,18 @@ export class JSFunction extends JSObject {
 }
 
 export class JSNativeFunction extends JSFunction {
-  constructor (
+  constructor(
     public name: JSString,
     public func: (...args: VObject[]) => VObject
   ) {
     super(name, 0, new Map())
   }
 
-  isNative ():this is JSNativeFunction {
+  isNative(): this is JSNativeFunction {
     return true
   }
 
-  apply (args: VObject[]) {
+  apply(args: VObject[]) {
     return this.func.apply(null, args)
   }
 }
