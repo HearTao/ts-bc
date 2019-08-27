@@ -3,9 +3,12 @@
   "version": "0.0.0",
   "description": "",
   "main": "index.js",
+  "browser": "browser.js",
   "scripts": {
     "start": "tsc -w",
     "build": "tsc",
+    "build:browser": "webpack",
+    "pretest": "npm run build && npm run build:browser",
     "test": "jest",
     "prettier": "prettier --config ./prettier.json --write ./types/**/* ./src/* ./src/**/* ./tests/**/*"
   },
@@ -27,10 +30,15 @@
   "devDependencies": {
     "@types/jest": "^24.0.18",
     "@types/node": "^12.7.2",
+    "@types/puppeteer": "^1.19.1",
     "jest": "^24.9.0",
-    "ts-node": "^8.3.0",
     "prettier": "^1.18.2",
-    "ts-jest": "^24.0.2"
+    "puppeteer": "^1.19.0",
+    "ts-jest": "^24.0.2",
+    "ts-loader": "^6.0.4",
+    "ts-node": "^8.3.0",
+    "webpack": "^4.39.2",
+    "webpack-cli": "^3.3.7"
   },
   "jest": {
     "preset": "ts-jest",
