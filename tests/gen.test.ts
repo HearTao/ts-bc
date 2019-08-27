@@ -116,10 +116,13 @@ test(`should work with assignment`, () => {
   run(code)
 })
 
-test(`should work with add assignment`, () => {
+test(`should work with add / sub / mul / div assignment`, () => {
   const code = `
-  let a = 1;
-  a += 233;
+  let a = 5;
+  a += 1;
+  a *= 4;
+  a /= 2;
+  a -= 1;
   a  
 `
   run(code)
