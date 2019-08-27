@@ -1,3 +1,5 @@
+/// <reference path="./typescript.d.ts" />
+
 import * as ts from 'typescript'
 import { OpCode, OpValue, Label } from './opcode'
 import { EnvironmentType } from './types'
@@ -270,6 +272,9 @@ export function gen(code: string): [(OpCode | OpValue)[], VObject[]] {
     switch (binary.operatorToken.kind) {
       case ts.SyntaxKind.EqualsToken:
       case ts.SyntaxKind.PlusEqualsToken:
+      case ts.SyntaxKind.MinusEqualsToken:
+      case ts.SyntaxKind.AsteriskEqualsToken:
+      case ts.SyntaxKind.SlashEqualsToken:
         visitAssignmentExpression(binary as ts.AssignmentExpression<ts.AssignmentOperatorToken>)
         return
     }
@@ -318,13 +323,32 @@ export function gen(code: string): [(OpCode | OpValue)[], VObject[]] {
         break
       }
       case ts.SyntaxKind.PlusEqualsToken:
-        {
-          visitor(expr.right)
-          visitor(expr.left)
-          op.push(OpCode.Add)
-          visitLeftHandSideExpression(expr.left)
-          op.push(OpCode.Set)
-        }
+        visitor(expr.left)
+        visitor(expr.right)
+        op.push(OpCode.Add)
+        visitLeftHandSideExpression(expr.left)
+        op.push(OpCode.Set)
+        break
+      case ts.SyntaxKind.MinusEqualsToken:
+        visitor(expr.left)
+        visitor(expr.right)
+        op.push(OpCode.Sub)
+        visitLeftHandSideExpression(expr.left)
+        op.push(OpCode.Set)
+        break
+      case ts.SyntaxKind.AsteriskEqualsToken:
+        visitor(expr.left)
+        visitor(expr.right)
+        op.push(OpCode.Mul)
+        visitLeftHandSideExpression(expr.left)
+        op.push(OpCode.Set)
+        break
+      case ts.SyntaxKind.SlashEqualsToken:
+        visitor(expr.left)
+        visitor(expr.right)
+        op.push(OpCode.Div)
+        visitLeftHandSideExpression(expr.left)
+        op.push(OpCode.Set)
         break
       default:
         throw new Error('not supported')
