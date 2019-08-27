@@ -212,6 +212,24 @@ test(`should work with upvalue`, () => {
     b();
     b()
   `
+
+  run(code)
+})
+
+test(`should work with Object.keys`, () => {
+  const code = `
+    var a = {
+      a: 1,
+      b: 2,
+      c: 3
+    };
+    Object['keys'](a)
+  `
+
+  const [op, value] = gen(code)
+  const vm = new VirtualMachine(op, value)
+
+  expect(vm.exec().value.debugValue().sort()).toStrictEqual(eval(code).sort())
 })
 
 test(`should work with step exec`, () => {

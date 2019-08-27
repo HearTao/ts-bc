@@ -77,8 +77,8 @@ export class JSObject extends VObject {
   private rc: number = 0
 
   constructor (
-    private properties: Map<string | number, VObject> = new Map(),
-    private prototype: JSObject | JSNull = JSNull.instance
+    public properties: Map<string | number, VObject> = new Map(),
+    public prototype: JSObject | JSNull = JSNull.instance
   ) {
     super()
   }
@@ -215,8 +215,29 @@ export class JSFunction extends JSObject {
     super()
   }
 
+  isNative (): this is JSNativeFunction {
+    return false
+  }
+
   get type() {
     return ObjectType.Function
+  }
+}
+
+export class JSNativeFunction extends JSFunction {
+  constructor (
+    public name: JSString,
+    public func: (...args: VObject[]) => VObject
+  ) {
+    super(name, 0, new Map())
+  }
+
+  isNative ():this is JSNativeFunction {
+    return true
+  }
+
+  apply (args: VObject[]) {
+    return this.func.apply(null, args)
   }
 }
 
@@ -231,7 +252,7 @@ export class JSArray extends JSObject {
 
   get(idx: JSNumber) {
     if (idx.value < 0 || idx.value >= this.items.length) {
-      throw new Error('index access out of range')
+      return JSUndefined.instance
     }
     return this.items[idx.value]
   }

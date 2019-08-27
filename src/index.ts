@@ -4,10 +4,10 @@ import { gen } from './gen'
 const code = `
 var a = {
     a: 1,
-    'b': 2,
-    ['c']: 3
+    b: 2,
+    c: 3
   };
-  [a['a'], a['b'], a['c']];`
+  Object['keys'](a)`
 const [op, value] = gen(code)
 
 const vm = new VirtualMachine(op, value)
