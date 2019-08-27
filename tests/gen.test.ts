@@ -229,7 +229,12 @@ test(`should work with Object.keys`, () => {
   const [op, value] = gen(code)
   const vm = new VirtualMachine(op, value)
 
-  expect(vm.exec().value.debugValue().sort()).toStrictEqual(eval(code).sort())
+  expect(
+    vm
+      .exec()
+      .value.debugValue()
+      .sort()
+  ).toStrictEqual(eval(code).sort())
 })
 
 test(`should work with step exec`, () => {

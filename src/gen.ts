@@ -3,7 +3,7 @@ import { OpCode, OpValue, Label } from './opcode'
 import { EnvironmentType } from './types'
 import { JSString, VObject, JSNumber } from './value'
 import createVHost from 'ts-ez-host'
-import { assertNever } from './utils';
+import { assertNever } from './utils'
 
 interface LexerContext {
   locals?: ts.SymbolTable
@@ -42,7 +42,7 @@ export function gen(code: string): [(OpCode | OpValue)[], VObject[]] {
         break
       case ts.SyntaxKind.StringLiteral:
         visitStringLiteral(<ts.StringLiteral>node)
-        break;
+        break
       case ts.SyntaxKind.BinaryExpression:
         visitBinaryExpression(<ts.BinaryExpression>node)
         break
@@ -87,7 +87,7 @@ export function gen(code: string): [(OpCode | OpValue)[], VObject[]] {
         break
       case ts.SyntaxKind.ObjectLiteralExpression:
         visitObjectLiteralExpression(<ts.ObjectLiteralExpression>node)
-        break;
+        break
       default:
         ts.forEachChild(node, visitor)
     }
@@ -111,19 +111,19 @@ export function gen(code: string): [(OpCode | OpValue)[], VObject[]] {
     obj.properties.forEach(prop => {
       if (ts.isPropertyAssignment(prop)) {
         visitor(prop.initializer)
-        
+
         switch (prop.name.kind) {
           case ts.SyntaxKind.Identifier:
             visitLeftHandSideExpression(prop.name)
-            break;
+            break
           case ts.SyntaxKind.ComputedPropertyName:
           case ts.SyntaxKind.StringLiteral:
           case ts.SyntaxKind.NumericLiteral:
             visitor(prop.name)
-            break;
+            break
           default:
             assertNever(prop.name)
-        } 
+        }
       }
     })
     op.push(OpCode.CreateObject)
@@ -270,7 +270,9 @@ export function gen(code: string): [(OpCode | OpValue)[], VObject[]] {
     switch (binary.operatorToken.kind) {
       case ts.SyntaxKind.EqualsToken:
       case ts.SyntaxKind.PlusEqualsToken:
-        visitAssignmentExpression(binary as ts.AssignmentExpression<ts.AssignmentOperatorToken>)
+        visitAssignmentExpression(binary as ts.AssignmentExpression<
+          ts.AssignmentOperatorToken
+        >)
         return
     }
 

@@ -19,7 +19,7 @@ import {
   JSString,
   JSObject
 } from './value'
-import { initPrototype } from './bom';
+import { initPrototype } from './bom'
 
 export default class VirtualMachine {
   private stack: VObject[] = []
@@ -34,7 +34,7 @@ export default class VirtualMachine {
     this.initGlobal()
   }
 
-  private initGlobal (){
+  private initGlobal() {
     const valueTable = new Map<string, VObject>()
     this.environments.push({
       type: EnvironmentType.global,
