@@ -33,7 +33,8 @@ export enum OpCode {
   CreateFunction,
   CreateObject,
 
-  IndexAccess
+  PropAccess,
+  PropAssignment
 }
 
 export interface OpValue {

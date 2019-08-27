@@ -116,6 +116,11 @@ export class JSObject extends VObject {
     }
     return JSUndefined.instance
   }
+
+  set(key: JSString | JSNumber, value: VObject) {
+    this.properties.set(key.value, value)
+    return value
+  }
 }
 
 export class JSValue extends VObject {

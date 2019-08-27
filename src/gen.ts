@@ -141,7 +141,7 @@ export function gen(code: string): [(OpCode | OpValue)[], VObject[]] {
   ) {
     visitor(elementAccess.expression)
     visitor(elementAccess.argumentExpression)
-    op.push(OpCode.IndexAccess)
+    op.push(OpCode.PropAccess)
   }
 
   function visitParameter(param: ts.ParameterDeclaration) {
@@ -316,7 +316,11 @@ export function gen(code: string): [(OpCode | OpValue)[], VObject[]] {
       case ts.SyntaxKind.EqualsToken: {
         visitor(expr.right)
         visitLeftHandSideExpression(expr.left)
-        op.push(OpCode.Set)
+        if (ts.isElementAccessExpression(expr.left)) {
+          op.push(OpCode.PropAssignment)
+        } else {
+          op.push(OpCode.Set)
+        }
         break
       }
       case ts.SyntaxKind.PlusEqualsToken:
@@ -325,7 +329,11 @@ export function gen(code: string): [(OpCode | OpValue)[], VObject[]] {
           visitor(expr.left)
           op.push(OpCode.Add)
           visitLeftHandSideExpression(expr.left)
-          op.push(OpCode.Set)
+          if (ts.isElementAccessExpression(expr.left)) {
+            op.push(OpCode.PropAssignment)
+          } else {
+            op.push(OpCode.Set)
+          }
         }
         break
       default:
@@ -370,6 +378,10 @@ export function gen(code: string): [(OpCode | OpValue)[], VObject[]] {
       case ts.SyntaxKind.Identifier:
         pushConst(new JSString((<ts.Identifier>lhs).text))
         break
+      case ts.SyntaxKind.ElementAccessExpression:
+        visitor((<ts.ElementAccessExpression>lhs).argumentExpression)
+        visitor((<ts.ElementAccessExpression>lhs).expression)
+        break;
       default:
         throw new Error('not supported')
     }
