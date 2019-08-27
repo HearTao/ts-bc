@@ -186,6 +186,19 @@ test(`should work with object property assignment`, () => {
   run(code)
 })
 
+test(`should work with object property access`, () => {
+  const code = `
+    var a = {
+      a: 1,
+      'b': 'a',
+      ['c']: 'b'
+    };
+    a.a = 2333;
+    a.a
+  `
+  run(code)
+})
+
 test(`should work with recu`, () => {
   const code = `
   function f(p) { return p === 0 ? p : p + f(p - 1) }

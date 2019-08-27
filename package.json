@@ -10,6 +10,7 @@
     "build:browser": "webpack",
     "pretest": "npm run build && npm run build:browser",
     "test": "jest",
+    "test:dev": "jest --testPathIgnorePatterns libs/ --testPathIgnorePatterns gen.browser.test.ts",
     "prettier": "prettier --config ./prettier.json --write ./types/**/* ./src/* ./src/**/* ./tests/**/*"
   },
   "repository": {

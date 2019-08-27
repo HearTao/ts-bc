@@ -82,6 +82,9 @@ export function gen(code: string): [(OpCode | OpValue)[], VObject[]] {
       case ts.SyntaxKind.ElementAccessExpression:
         visitElementAccessExpression(<ts.ElementAccessExpression>node)
         break
+      case ts.SyntaxKind.PropertyAccessExpression:
+        visitPropertyAccessExpression(<ts.PropertyAccessExpression>node)
+        break
       case ts.SyntaxKind.ArrayLiteralExpression:
         visitArrayLiteralExpression(<ts.ArrayLiteralExpression>node)
         break
@@ -105,6 +108,12 @@ export function gen(code: string): [(OpCode | OpValue)[], VObject[]] {
     value.push(v)
     op.push(OpCode.Const)
     op.push({ value: value.length - 1 })
+  }
+
+  function visitPropertyAccessExpression(propAccess: ts.PropertyAccessExpression) {
+    visitor(propAccess.expression)
+    pushConst(new JSString(propAccess.name.text))
+    op.push(OpCode.PropAccess)
   }
 
   function visitObjectLiteralExpression(obj: ts.ObjectLiteralExpression) {
@@ -316,7 +325,7 @@ export function gen(code: string): [(OpCode | OpValue)[], VObject[]] {
       case ts.SyntaxKind.EqualsToken: {
         visitor(expr.right)
         visitLeftHandSideExpression(expr.left)
-        if (ts.isElementAccessExpression(expr.left)) {
+        if (ts.isElementAccessExpression(expr.left) || ts.isPropertyAccessExpression(expr.left)) {
           op.push(OpCode.PropAssignment)
         } else {
           op.push(OpCode.Set)
@@ -329,7 +338,7 @@ export function gen(code: string): [(OpCode | OpValue)[], VObject[]] {
           visitor(expr.left)
           op.push(OpCode.Add)
           visitLeftHandSideExpression(expr.left)
-          if (ts.isElementAccessExpression(expr.left)) {
+          if (ts.isElementAccessExpression(expr.left) || ts.isPropertyAccessExpression(expr.left)) {
             op.push(OpCode.PropAssignment)
           } else {
             op.push(OpCode.Set)
@@ -381,6 +390,10 @@ export function gen(code: string): [(OpCode | OpValue)[], VObject[]] {
       case ts.SyntaxKind.ElementAccessExpression:
         visitor((<ts.ElementAccessExpression>lhs).argumentExpression)
         visitor((<ts.ElementAccessExpression>lhs).expression)
+        break;
+      case ts.SyntaxKind.PropertyAccessExpression:
+        pushConst(new JSString((<ts.PropertyAccessExpression>lhs).name.text))
+        visitor((<ts.PropertyAccessExpression>lhs).expression)
         break;
       default:
         throw new Error('not supported')
