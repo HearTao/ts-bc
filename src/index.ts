@@ -1,15 +1,15 @@
-
 import VirtualMachine from './vm'
 import { gen } from './gen'
 
 const code = `
 var a = {
   a: 1,
-  'b': 'a',
-  ['c']: 'b'
+  foo: function f () {
+    return this.a
+  }
 };
-a.a = 2333;
-a.a`
+a.foo()
+`
 const [op, value] = gen(code)
 
 const vm = new VirtualMachine(op, value)

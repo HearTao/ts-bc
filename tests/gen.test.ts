@@ -242,6 +242,32 @@ test(`should work with upvalue`, () => {
   run(code)
 })
 
+test(`should work with this`, () => {
+  const code = `
+  var a = {
+    a: 1,
+    foo: function f () {
+      return this.a
+    }
+  };
+  a.foo()
+  `
+  run(code)
+})
+
+test(`should work with undefined this`, () => {
+  const code = `
+  var a = {
+    foo: function f () {
+      return this
+    }
+  };
+  var f = a.foo;
+  f()
+  `
+  run(code)
+})
+
 test(`should work with Object.keys`, () => {
   const code = `
     var a = {

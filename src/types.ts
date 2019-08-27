@@ -1,5 +1,5 @@
 import { OpCode, OpValue } from './opcode'
-import { VObject } from './value'
+import { VObject, JSUndefined } from './value'
 
 export interface VMDump {
   stack: VObject[]
@@ -52,4 +52,5 @@ export interface StackFrame {
   ret: number
   entry: number
   environments: LexerEnvironment | GlobalEnvironment
+  thisObject: VObject | JSUndefined
 }

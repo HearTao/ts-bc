@@ -25,6 +25,7 @@ export enum OpCode {
 
   Ret,
   Call,
+  CallMethod,
 
   Null,
   Undefined,
@@ -32,6 +33,8 @@ export enum OpCode {
   CreateArray,
   CreateFunction,
   CreateObject,
+
+  This,
 
   PropAccess,
   PropAssignment
