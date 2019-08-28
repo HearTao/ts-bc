@@ -25,6 +25,7 @@ export enum OpCode {
 
   Ret,
   Call,
+  CallMethod,
 
   Null,
   Undefined,
@@ -33,7 +34,10 @@ export enum OpCode {
   CreateFunction,
   CreateObject,
 
-  IndexAccess
+  This,
+
+  PropAccess,
+  PropAssignment
 }
 
 export interface OpValue {

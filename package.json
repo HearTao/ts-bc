@@ -6,10 +6,9 @@
   "browser": "browser.js",
   "scripts": {
     "start": "tsc -w",
-    "build": "tsc",
-    "build:browser": "webpack",
-    "pretest": "npm run build && npm run build:browser",
-    "test": "jest",
+    "build": "tsc & webpack",
+    "test": "jest --testPathIgnorePatterns browser",
+    "test:browser": "webpack && jest",
     "prettier": "prettier --config ./prettier.json --write ./types/**/* ./src/* ./src/**/* ./tests/**/*"
   },
   "repository": {
@@ -24,8 +23,8 @@
   "homepage": "https://github.com/HearTao/ts-bc#readme",
   "dependencies": {
     "memfs": "^2.15.5",
-    "typescript": "^3.7.0-dev.20190822",
-    "ts-ez-host": "^0.0.5"
+    "ts-ez-host": "0.0.7",
+    "typescript": "^3.7.0-dev.20190822"
   },
   "devDependencies": {
     "@types/jest": "^24.0.18",
@@ -34,17 +33,14 @@
     "jest": "^24.9.0",
     "prettier": "^1.18.2",
     "puppeteer": "^1.19.0",
-    "ts-jest": "^24.0.2",
     "ts-loader": "^6.0.4",
-    "ts-node": "^8.3.0",
     "webpack": "^4.39.2",
-    "webpack-cli": "^3.3.7"
+    "webpack-cli": "^3.3.7",
+    "ts-jest": "^24.0.2",
+    "ts-node": "^8.3.0"
   },
   "jest": {
     "preset": "ts-jest",
-    "testEnvironment": "node",
-    "testPathIgnorePatterns": [
-      "libs/"
-    ]
+    "testEnvironment": "node"
   }
 }

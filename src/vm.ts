@@ -19,7 +19,7 @@ import {
   JSString,
   JSObject
 } from './value'
-import { initPrototype } from './bom';
+import { initPrototype } from './bom'
 
 export default class VirtualMachine {
   private stack: VObject[] = []
@@ -34,7 +34,7 @@ export default class VirtualMachine {
     this.initGlobal()
   }
 
-  private initGlobal (){
+  private initGlobal() {
     const valueTable = new Map<string, VObject>()
     this.environments.push({
       type: EnvironmentType.global,
@@ -263,6 +263,61 @@ export default class VirtualMachine {
           break
         }
 
+        case OpCode.CallMethod: {
+          const idx = this.popStack()
+          const obj = this.popStack()
+
+          if (obj.isObject() && (idx.isNumber() || idx.isString())) {
+            this.stack.push(obj.get(idx))
+          } else {
+            throw new Error('not supported index access')
+          }
+
+          const callee = this.popStack()
+          const length = this.popStack()
+
+          if (!callee.isObject() || !callee.isFunction()) {
+            throw new Error('is not callable')
+          }
+
+          if (callee.isNative()) {
+            const args: VObject[] = []
+            for (let i = 0; i < length.asNumber().value; ++i) {
+              args.push(this.popStack())
+            }
+
+            this.stack.push(callee.apply(args))
+            break
+          }
+
+          const stackFrame: StackFrame = {
+            ret: this.cur,
+            entry: this.stack.length,
+            environments: {
+              type: EnvironmentType.lexer,
+              valueTable: new Map(),
+              upValue: callee.upvalue
+            },
+            thisObject: obj
+          }
+
+          this.frames.push(stackFrame)
+          this.environments.push(
+            this.frames[this.frames.length - 1].environments
+          )
+
+          this.cur = callee.pos
+
+          const args: VObject[] = []
+          for (let i = 0; i < length.asNumber().value; ++i) {
+            args.push(this.popStack())
+          }
+
+          this.stack.push(new JSArray(args))
+          args.forEach(x => this.stack.push(x))
+          break
+        }
+
         case OpCode.Call: {
           const callee = this.popStack()
           const length = this.popStack()
@@ -288,7 +343,8 @@ export default class VirtualMachine {
               type: EnvironmentType.lexer,
               valueTable: new Map(),
               upValue: callee.upvalue
-            }
+            },
+            thisObject: JSUndefined.instance
           }
 
           this.frames.push(stackFrame)
@@ -318,7 +374,7 @@ export default class VirtualMachine {
           break
         }
 
-        case OpCode.IndexAccess: {
+        case OpCode.PropAccess: {
           const idx = this.popStack()
           const obj = this.popStack()
           if (obj.isObject() && (idx.isNumber() || idx.isString())) {
@@ -379,6 +435,23 @@ export default class VirtualMachine {
             }
           }
           this.stack.push(new JSObject(properties))
+          break
+        }
+
+        case OpCode.PropAssignment: {
+          const obj = this.popStack()
+          const idx = this.popStack()
+          const value = this.popStack()
+          if (obj.isObject() && (idx.isNumber() || idx.isString())) {
+            obj.set(idx, value)
+          } else {
+            throw new Error('invalid object assignment')
+          }
+          break
+        }
+
+        case OpCode.This: {
+          this.stack.push(this.frames[this.frames.length - 1].thisObject)
           break
         }
 

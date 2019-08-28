@@ -3,7 +3,7 @@ import { OpCode, OpValue, Label } from './opcode'
 import { EnvironmentType } from './types'
 import { JSString, VObject, JSNumber } from './value'
 import createVHost from 'ts-ez-host'
-import { assertNever } from './utils';
+import { assertNever } from './utils'
 
 interface LexerContext {
   locals?: ts.SymbolTable
@@ -42,7 +42,7 @@ export function gen(code: string): [(OpCode | OpValue)[], VObject[]] {
         break
       case ts.SyntaxKind.StringLiteral:
         visitStringLiteral(<ts.StringLiteral>node)
-        break;
+        break
       case ts.SyntaxKind.BinaryExpression:
         visitBinaryExpression(<ts.BinaryExpression>node)
         break
@@ -70,6 +70,9 @@ export function gen(code: string): [(OpCode | OpValue)[], VObject[]] {
       case ts.SyntaxKind.FunctionDeclaration:
         visitFunctionDeclaration(<ts.FunctionDeclaration>node)
         break
+      case ts.SyntaxKind.FunctionExpression:
+        visitFunctionExpression(<ts.FunctionExpression>node)
+        break
       case ts.SyntaxKind.CallExpression:
         visitCallExpression(<ts.CallExpression>node)
         break
@@ -82,12 +85,18 @@ export function gen(code: string): [(OpCode | OpValue)[], VObject[]] {
       case ts.SyntaxKind.ElementAccessExpression:
         visitElementAccessExpression(<ts.ElementAccessExpression>node)
         break
+      case ts.SyntaxKind.PropertyAccessExpression:
+        visitPropertyAccessExpression(<ts.PropertyAccessExpression>node)
+        break
       case ts.SyntaxKind.ArrayLiteralExpression:
         visitArrayLiteralExpression(<ts.ArrayLiteralExpression>node)
         break
       case ts.SyntaxKind.ObjectLiteralExpression:
         visitObjectLiteralExpression(<ts.ObjectLiteralExpression>node)
-        break;
+        break
+      case ts.SyntaxKind.ThisKeyword:
+        visitThisExpression(<ts.ThisExpression>node)
+        break
       default:
         ts.forEachChild(node, visitor)
     }
@@ -107,23 +116,35 @@ export function gen(code: string): [(OpCode | OpValue)[], VObject[]] {
     op.push({ value: value.length - 1 })
   }
 
+  function visitThisExpression(expr: ts.ThisExpression) {
+    op.push(OpCode.This)
+  }
+
+  function visitPropertyAccessExpression(
+    propAccess: ts.PropertyAccessExpression
+  ) {
+    visitor(propAccess.expression)
+    pushConst(new JSString(propAccess.name.text))
+    op.push(OpCode.PropAccess)
+  }
+
   function visitObjectLiteralExpression(obj: ts.ObjectLiteralExpression) {
     obj.properties.forEach(prop => {
       if (ts.isPropertyAssignment(prop)) {
         visitor(prop.initializer)
-        
+
         switch (prop.name.kind) {
           case ts.SyntaxKind.Identifier:
             visitLeftHandSideExpression(prop.name)
-            break;
+            break
           case ts.SyntaxKind.ComputedPropertyName:
           case ts.SyntaxKind.StringLiteral:
           case ts.SyntaxKind.NumericLiteral:
             visitor(prop.name)
-            break;
+            break
           default:
             assertNever(prop.name)
-        } 
+        }
       }
     })
     op.push(OpCode.CreateObject)
@@ -141,7 +162,7 @@ export function gen(code: string): [(OpCode | OpValue)[], VObject[]] {
   ) {
     visitor(elementAccess.expression)
     visitor(elementAccess.argumentExpression)
-    op.push(OpCode.IndexAccess)
+    op.push(OpCode.PropAccess)
   }
 
   function visitParameter(param: ts.ParameterDeclaration) {
@@ -166,10 +187,27 @@ export function gen(code: string): [(OpCode | OpValue)[], VObject[]] {
     op.push(OpCode.Push)
     op.push({ value: call.arguments.length })
     visitor(call.expression)
-    op.push(OpCode.Call)
+
+    if (op[op.length - 1] === OpCode.PropAccess) {
+      op[op.length - 1] = OpCode.CallMethod
+    } else {
+      op.push(OpCode.Call)
+    }
+  }
+
+  function visitFunctionExpression(func: ts.FunctionExpression) {
+    return visitFunctionLikeDeclaration(func)
   }
 
   function visitFunctionDeclaration(func: ts.FunctionDeclaration) {
+    return visitFunctionLikeDeclaration(func)
+  }
+
+  function visitFunctionLikeDeclaration(func: ts.FunctionLikeDeclaration) {
+    if (!func.body) {
+      throw new Error('function must have body')
+    }
+
     const label1 = createLabel()
     const label2 = createLabel()
 
@@ -187,7 +225,11 @@ export function gen(code: string): [(OpCode | OpValue)[], VObject[]] {
       upValue: new Set()
     })
 
-    func.body!.statements.forEach(visitor)
+    if (ts.isBlock(func.body)) {
+      func.body.statements.forEach(visitor)
+    } else {
+      visitor(func.body)
+    }
 
     op.push(OpCode.Undefined)
     op.push(OpCode.Ret)
@@ -270,7 +312,9 @@ export function gen(code: string): [(OpCode | OpValue)[], VObject[]] {
     switch (binary.operatorToken.kind) {
       case ts.SyntaxKind.EqualsToken:
       case ts.SyntaxKind.PlusEqualsToken:
-        visitAssignmentExpression(binary as ts.AssignmentExpression<ts.AssignmentOperatorToken>)
+        visitAssignmentExpression(binary as ts.AssignmentExpression<
+          ts.AssignmentOperatorToken
+        >)
         return
     }
 
@@ -314,7 +358,14 @@ export function gen(code: string): [(OpCode | OpValue)[], VObject[]] {
       case ts.SyntaxKind.EqualsToken: {
         visitor(expr.right)
         visitLeftHandSideExpression(expr.left)
-        op.push(OpCode.Set)
+        if (
+          ts.isElementAccessExpression(expr.left) ||
+          ts.isPropertyAccessExpression(expr.left)
+        ) {
+          op.push(OpCode.PropAssignment)
+        } else {
+          op.push(OpCode.Set)
+        }
         break
       }
       case ts.SyntaxKind.PlusEqualsToken:
@@ -323,7 +374,14 @@ export function gen(code: string): [(OpCode | OpValue)[], VObject[]] {
           visitor(expr.left)
           op.push(OpCode.Add)
           visitLeftHandSideExpression(expr.left)
-          op.push(OpCode.Set)
+          if (
+            ts.isElementAccessExpression(expr.left) ||
+            ts.isPropertyAccessExpression(expr.left)
+          ) {
+            op.push(OpCode.PropAssignment)
+          } else {
+            op.push(OpCode.Set)
+          }
         }
         break
       default:
@@ -367,6 +425,14 @@ export function gen(code: string): [(OpCode | OpValue)[], VObject[]] {
     switch (lhs.kind) {
       case ts.SyntaxKind.Identifier:
         pushConst(new JSString((<ts.Identifier>lhs).text))
+        break
+      case ts.SyntaxKind.ElementAccessExpression:
+        visitor((<ts.ElementAccessExpression>lhs).argumentExpression)
+        visitor((<ts.ElementAccessExpression>lhs).expression)
+        break
+      case ts.SyntaxKind.PropertyAccessExpression:
+        pushConst(new JSString((<ts.PropertyAccessExpression>lhs).name.text))
+        visitor((<ts.PropertyAccessExpression>lhs).expression)
         break
       default:
         throw new Error('not supported')

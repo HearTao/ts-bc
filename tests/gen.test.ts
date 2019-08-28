@@ -173,6 +173,32 @@ test(`should work with object literal`, () => {
   run(code)
 })
 
+test(`should work with object property assignment`, () => {
+  const code = `
+    var a = {
+      a: 1,
+      'b': 'a',
+      ['c']: 'b'
+    };
+    a[a[a['c']]] = 2333;
+    a['a']
+  `
+  run(code)
+})
+
+test(`should work with object property access`, () => {
+  const code = `
+    var a = {
+      a: 1,
+      'b': 'a',
+      ['c']: 'b'
+    };
+    a.a = 2333;
+    a.a
+  `
+  run(code)
+})
+
 test(`should work with recu`, () => {
   const code = `
   function f(p) { return p === 0 ? p : p + f(p - 1) }
@@ -216,6 +242,32 @@ test(`should work with upvalue`, () => {
   run(code)
 })
 
+test(`should work with this`, () => {
+  const code = `
+  var a = {
+    a: 1,
+    foo: function f () {
+      return this.a
+    }
+  };
+  a.foo()
+  `
+  run(code)
+})
+
+test(`should work with undefined this`, () => {
+  const code = `
+  var a = {
+    foo: function f () {
+      return this
+    }
+  };
+  var f = a.foo;
+  f()
+  `
+  run(code)
+})
+
 test(`should work with Object.keys`, () => {
   const code = `
     var a = {
@@ -229,7 +281,12 @@ test(`should work with Object.keys`, () => {
   const [op, value] = gen(code)
   const vm = new VirtualMachine(op, value)
 
-  expect(vm.exec().value.debugValue().sort()).toStrictEqual(eval(code).sort())
+  expect(
+    vm
+      .exec()
+      .value.debugValue()
+      .sort()
+  ).toStrictEqual(eval(code).sort())
 })
 
 test(`should work with step exec`, () => {

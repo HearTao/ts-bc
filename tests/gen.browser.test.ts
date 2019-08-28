@@ -6,8 +6,14 @@ let browser: pupp.Browser
 let page: pupp.Page
 
 const lib = {
-  typescript: fs.readFileSync(path.resolve(__dirname, '../typescript.js'), 'utf-8'),
-  browser: fs.readFileSync(path.resolve(__dirname, '../libs/browser.js'), 'utf-8')
+  typescript: fs.readFileSync(
+    path.resolve(__dirname, '../typescript.js'),
+    'utf-8'
+  ),
+  browser: fs.readFileSync(
+    path.resolve(__dirname, '../libs/browser.js'),
+    'utf-8'
+  )
 }
 
 beforeAll(async () => {
@@ -21,9 +27,8 @@ afterAll(async () => {
   await browser.close()
 })
 
-
 async function run(code: string) {
-  if(!page) throw 42
+  if (!page) throw 42
   const wrap = `\
 ;(() => {
   const { default: VirtualMachine, gen } = TSBC
@@ -56,7 +61,10 @@ describe(`variable`, () => {
   testCode(`var a = 1;a ? a + 1 : 0`)
   testCode(`var a = 1;++a`)
   testCode(`var a = 0;while (a < 2) { ++a } a`)
-  testThrow(`var a = 0;while (a < 2) { let b = a + 1; ++a } b`, `cannot find name b`)
+  testThrow(
+    `var a = 0;while (a < 2) { let b = a + 1; ++a } b`,
+    `cannot find name b`
+  )
   testCode(`let a = 1;a = 233;a`)
   testCode(`let a = 1;a += 233;a`)
 })
@@ -131,7 +139,7 @@ describe(`object & array`, () => {
       };
       Object['keys'](a)
     `
-  
+
     const res = await run(code)
     return expect(res.sort()).toStrictEqual(eval(code).sort())
   })
