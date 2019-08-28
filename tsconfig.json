@@ -5,8 +5,13 @@
         "moduleResolution": "node",
         "strict": true,
         "alwaysStrict": true,
+        "rootDir": "src",
         "outDir": "libs",
         "declaration": true,
         "sourceMap": true
-    }
+    },
+    "exclude": [
+        "webpack.config.ts",
+        "tests"
+    ]
 }

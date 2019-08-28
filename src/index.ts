@@ -1,7 +1,8 @@
 import VirtualMachine from './vm'
 import { gen } from './gen'
 
-// export { default as default } from './vm'
+export { default as default } from './vm'
+export { gen } from './gen'
 
 const code = `
 var a = {
