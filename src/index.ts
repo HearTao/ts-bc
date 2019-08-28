@@ -1,7 +1,3 @@
-<<<<<<< HEAD
-export { default as default } from './vm'
-export { gen } from './gen'
-=======
 import VirtualMachine from './vm'
 import { gen } from './gen'
 
@@ -24,4 +20,3 @@ const vm = new VirtualMachine(op, value)
 console.log(`code: ${code}`)
 console.log(`vm: ${vm.exec().value.debugValue()}`)
 console.log(`eval: ${eval(code)}`)
->>>>>>> master
