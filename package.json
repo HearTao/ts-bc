@@ -23,7 +23,7 @@
   "homepage": "https://github.com/HearTao/ts-bc#readme",
   "dependencies": {
     "memfs": "^2.15.5",
-    "ts-ez-host": "0.0.7",
+    "ts-ez-host": "^0.0.7",
     "typescript": "^3.7.0-dev.20190822"
   },
   "devDependencies": {
@@ -33,7 +33,9 @@
     "jest": "^24.9.0",
     "prettier": "^1.18.2",
     "puppeteer": "^1.19.0",
+    "ts-jest": "^24.0.2",
     "ts-loader": "^6.0.4",
+    "ts-node": "^8.3.0",
     "webpack": "^4.39.2",
     "webpack-cli": "^3.3.7",
     "ts-jest": "^24.0.2",
