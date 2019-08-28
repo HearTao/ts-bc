@@ -35,6 +35,7 @@ export enum OpCode {
   CreateObject,
 
   This,
+  New,
 
   PropAccess,
   PropAssignment

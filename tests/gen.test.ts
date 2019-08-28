@@ -305,6 +305,18 @@ test(`should work with '__proto__' and 'prototype'`, () => {
   ).toStrictEqual(eval(code).sort())
 })
 
+test(`should work with new Ctor`, () => {
+  const code = `
+    function A () {
+      this.hehe = 1
+    }
+
+    const a = new A()
+    a.hehe
+  `
+  run(code)
+})
+
 test(`should work with step exec`, () => {
   const code = '0 ? 2 : 0 ? 3 : 4'
   stepRun(code)

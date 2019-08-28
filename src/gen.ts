@@ -97,6 +97,9 @@ export function gen(code: string): [(OpCode | OpValue)[], VObject[]] {
       case ts.SyntaxKind.ThisKeyword:
         visitThisExpression(<ts.ThisExpression>node)
         break
+      case ts.SyntaxKind.NewExpression:
+        visitNewExpression(<ts.NewExpression>node)
+        break
       default:
         ts.forEachChild(node, visitor)
     }
@@ -114,6 +117,15 @@ export function gen(code: string): [(OpCode | OpValue)[], VObject[]] {
     value.push(v)
     op.push(OpCode.Const)
     op.push({ value: value.length - 1 })
+  }
+
+  function visitNewExpression(expr: ts.NewExpression) {
+    const args = expr.arguments || ([] as ts.Expression[])
+    args.forEach(visitor)
+    op.push(OpCode.Push)
+    op.push({ value: args.length })
+    visitor(expr.expression)
+    op.push(OpCode.New)
   }
 
   function visitThisExpression(expr: ts.ThisExpression) {
@@ -135,7 +147,7 @@ export function gen(code: string): [(OpCode | OpValue)[], VObject[]] {
 
         switch (prop.name.kind) {
           case ts.SyntaxKind.Identifier:
-            visitLeftHandSideExpression(prop.name)
+            pushConst(new JSString(prop.name.text))
             break
           case ts.SyntaxKind.ComputedPropertyName:
           case ts.SyntaxKind.StringLiteral:
@@ -435,7 +447,7 @@ export function gen(code: string): [(OpCode | OpValue)[], VObject[]] {
         visitor((<ts.PropertyAccessExpression>lhs).expression)
         break
       default:
-        throw new Error('not supported')
+        throw new Error('unsupported')
     }
   }
 

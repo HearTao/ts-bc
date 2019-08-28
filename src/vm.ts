@@ -203,9 +203,11 @@ export default class VirtualMachine {
         case OpCode.StrictNEQ: {
           const right = this.popStack()
           const left = this.popStack()
-          this.stack.push(
-            new JSBoolean(left.asNumber().value !== right.asNumber().value)
-          )
+          if (left.isNumber() && right.isNumber()) {
+            this.stack.push(new JSBoolean(left.value !== right.value))
+          } else {
+            this.stack.push(new JSBoolean(left !== right))
+          }
           break
         }
 
@@ -227,6 +229,7 @@ export default class VirtualMachine {
           this.stack.push(new JSNumber(this.popCode()))
           break
         }
+
         case OpCode.Def: {
           const name = this.popStack()
           const initializer = this.popStack()
@@ -282,41 +285,12 @@ export default class VirtualMachine {
             throw new Error('is not callable')
           }
 
-          if (callee.isNative()) {
-            const args: VObject[] = []
-            for (let i = 0; i < length.asNumber().value; ++i) {
-              args.push(this.popStack())
-            }
-
-            this.stack.push(callee.apply(args))
-            break
-          }
-
-          const stackFrame: StackFrame = {
-            ret: this.cur,
-            entry: this.stack.length,
-            environments: {
-              type: EnvironmentType.lexer,
-              valueTable: new Map(),
-              upValue: callee.upvalue
-            },
-            thisObject: obj
-          }
-
-          this.frames.push(stackFrame)
-          this.environments.push(
-            this.frames[this.frames.length - 1].environments
-          )
-
-          this.cur = callee.pos
-
           const args: VObject[] = []
           for (let i = 0; i < length.asNumber().value; ++i) {
             args.push(this.popStack())
           }
 
-          this.stack.push(new JSArray(args))
-          args.forEach(x => this.stack.push(x))
+          this.call(callee, args, obj)
           break
         }
 
@@ -328,41 +302,12 @@ export default class VirtualMachine {
             throw new Error('is not callable')
           }
 
-          if (callee.isNative()) {
-            const args: VObject[] = []
-            for (let i = 0; i < length.asNumber().value; ++i) {
-              args.push(this.popStack())
-            }
-
-            this.stack.push(callee.apply(args))
-            break
-          }
-
-          const stackFrame: StackFrame = {
-            ret: this.cur,
-            entry: this.stack.length,
-            environments: {
-              type: EnvironmentType.lexer,
-              valueTable: new Map(),
-              upValue: callee.upvalue
-            },
-            thisObject: JSUndefined.instance
-          }
-
-          this.frames.push(stackFrame)
-          this.environments.push(
-            this.frames[this.frames.length - 1].environments
-          )
-
-          this.cur = callee.pos
-
           const args: VObject[] = []
           for (let i = 0; i < length.asNumber().value; ++i) {
             args.push(this.popStack())
           }
 
-          this.stack.push(new JSArray(args))
-          args.forEach(x => this.stack.push(x))
+          this.call(callee, args, JSUndefined.instance)
           break
         }
 
@@ -457,6 +402,28 @@ export default class VirtualMachine {
           break
         }
 
+        case OpCode.New: {
+          const callee = this.popStack()
+          const length = this.popStack()
+
+          if (!callee.isObject() || !callee.isFunction()) {
+            throw new Error('is not callable')
+          }
+
+          const args: VObject[] = []
+          for (let i = 0; i < length.asNumber().value; ++i) {
+            args.push(this.popStack())
+          }
+
+          const protoType = callee.getOwn(new JSString('prototype'))
+
+          const self = new JSObject()
+          self.set(new JSString('__proto__'), protoType)
+          this.stack.push(self)
+          this.call(callee, args, self)
+          break
+        }
+
         case OpCode.Null: {
           this.stack.push(JSNull.instance)
           break
@@ -484,5 +451,31 @@ export default class VirtualMachine {
       finished: true,
       value: this.popStack()
     }
+  }
+
+  call(callee: JSFunction, args: VObject[], thisObject: VObject) {
+    if (callee.isNative()) {
+      this.stack.push(callee.apply(args))
+      return
+    }
+
+    const stackFrame: StackFrame = {
+      thisObject,
+      ret: this.cur,
+      entry: this.stack.length,
+      environments: {
+        type: EnvironmentType.lexer,
+        valueTable: new Map(),
+        upValue: callee.upvalue
+      }
+    }
+
+    this.frames.push(stackFrame)
+    this.environments.push(this.frames[this.frames.length - 1].environments)
+
+    this.cur = callee.pos
+    this.stack.push(new JSArray(args))
+    args.forEach(x => this.stack.push(x))
+    return
   }
 }

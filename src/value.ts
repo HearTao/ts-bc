@@ -140,9 +140,16 @@ export class JSObject extends VObject {
       return this.properties.get(key.value)!
     }
 
-    const protoType = this.get(new JSString('prototype'))
+    const protoType = this.getOwn(new JSString('__proto__'))
     if (protoType.isObject()) {
       return protoType.get(key)
+    }
+    return JSUndefined.instance
+  }
+
+  getOwn(key: JSString | JSNumber): VObject | JSUndefined {
+    if (this.properties.has(key.value)) {
+      return this.properties.get(key.value)!
     }
     return JSUndefined.instance
   }
