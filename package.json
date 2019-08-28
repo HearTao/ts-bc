@@ -6,10 +6,9 @@
   "browser": "browser.js",
   "scripts": {
     "start": "tsc -w",
-    "build": "tsc",
-    "build:browser": "webpack",
-    "test": "jest --config=jest.config.js",
-    "test:browser": "npm run build:browser && jest --config=jest.config.browser.js",
+    "build": "tsc & webpack",
+    "test": "jest --testPathIgnorePatterns browser",
+    "test:browser": "webpack && jest",
     "prettier": "prettier --config ./prettier.json --write ./types/**/* ./src/* ./src/**/* ./tests/**/*"
   },
   "repository": {
@@ -38,6 +37,12 @@
     "ts-loader": "^6.0.4",
     "ts-node": "^8.3.0",
     "webpack": "^4.39.2",
-    "webpack-cli": "^3.3.7"
+    "webpack-cli": "^3.3.7",
+    "ts-jest": "^24.0.2",
+    "ts-node": "^8.3.0"
+  },
+  "jest": {
+    "preset": "ts-jest",
+    "testEnvironment": "node"
   }
 }
