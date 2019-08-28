@@ -1,19 +1,51 @@
-import { VObject, JSObject, JSNativeFunction, JSString, JSArray } from './value'
+import {
+  VObject,
+  JSObject,
+  JSNativeFunction,
+  JSString,
+  JSArray,
+  JSFunction
+} from './value'
+import { JSUndefined } from './value'
 
-export function initPrototype(valueTable: Map<string, VObject>) {
-  initObjectPrototype(valueTable)
+export function init(valueTable: Map<string, VObject>) {
+  initPrototype(valueTable)
 
-  initArrayPrototype(valueTable)
+  initArrayConstructor(valueTable)
 }
 
-function initObjectPrototype(valueTable: Map<string, VObject>) {
-  const objectPrototypeProps = new Map<string, VObject>()
+export function initPrototype(valueTable: Map<string, VObject>) {
+  const metaObjectProto = new JSObject()
+  initMetaObjectProto(metaObjectProto)
 
-  objectPrototypeProps.set(
-    'keys',
-    new JSNativeFunction(new JSString('keys'), (...args: VObject[]) => {
-      const [obj] = args
+  const metaFunctionProto = new JSNativeFunction(
+    JSString.empty,
+    () => new JSFunction()
+  )
+  metaFunctionProto.set(new JSString('__proto__'), metaObjectProto)
+  initMetaFunctionProto(metaFunctionProto)
 
+  const funcCtor = new JSNativeFunction(JSString.empty, () => new JSObject())
+  funcCtor.set(new JSString('__proto__'), metaFunctionProto)
+  funcCtor.set(new JSString('prototype'), metaFunctionProto)
+
+  const objectCtor = new JSNativeFunction(JSString.empty, () => new JSObject())
+  objectCtor.set(new JSString('prototype'), metaObjectProto)
+  objectCtor.set(new JSString('__proto__'), metaFunctionProto)
+
+  initObjectConstructor(objectCtor)
+  valueTable.set('Function', funcCtor)
+  valueTable.set('Object', objectCtor)
+}
+
+function initMetaObjectProto(metaObjectProto: JSObject) {}
+
+function initMetaFunctionProto(metaObjectProto: JSObject) {}
+
+function initObjectConstructor(objectCtor: JSNativeFunction) {
+  objectCtor.set(
+    new JSString('keys'),
+    new JSNativeFunction(new JSString('keys'), (...[obj]: VObject[]) => {
       if (obj.isObject()) {
         return new JSArray(
           Array.from(obj.properties.keys()).map(x => new JSString(x.toString()))
@@ -22,11 +54,9 @@ function initObjectPrototype(valueTable: Map<string, VObject>) {
       return new JSArray([])
     })
   )
-
-  valueTable.set('Object', new JSObject(objectPrototypeProps))
 }
 
-function initArrayPrototype(valueTable: Map<string, VObject>) {
-  const arrayPrototypeProps = new Map<string, VObject>()
-  valueTable.set('Array', new JSObject(arrayPrototypeProps))
+function initArrayConstructor(valueTable: Map<string, VObject>) {
+  const arrayConstructorProps = new Map<string, VObject>()
+  valueTable.set('Array', new JSObject(arrayConstructorProps))
 }

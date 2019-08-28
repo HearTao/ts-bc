@@ -3,7 +3,6 @@ export enum ObjectType {
   String,
   Boolean,
   Object,
-  Value,
   Function,
   Array,
   Undefined,
@@ -38,10 +37,6 @@ export abstract class VObject {
     return this.isNumber() || this.isBoolean() || this.isString()
   }
 
-  isValue(): this is JSValue {
-    return false
-  }
-
   isObject(): this is JSObject {
     return false
   }
@@ -70,108 +65,6 @@ export abstract class JSPrimitive extends VObject {
 
   public debugValue() {
     return this.value
-  }
-}
-
-export class JSObject extends VObject {
-  private rc: number = 0
-
-  constructor(
-    public properties: Map<string | number, VObject> = new Map(),
-    public prototype: JSObject | JSNull = JSNull.instance
-  ) {
-    super()
-  }
-
-  get type() {
-    return ObjectType.Object
-  }
-
-  debugValue(): any {
-    return this
-  }
-
-  isObject(): this is JSObject {
-    return true
-  }
-
-  isArray(): this is JSArray {
-    return this.type === ObjectType.Array
-  }
-
-  isFunction(): this is JSFunction {
-    return this.type === ObjectType.Function
-  }
-
-  asArray(): JSArray {
-    throw new Error('invalid cast')
-  }
-
-  get(key: JSString | JSNumber): VObject | JSUndefined {
-    if (this.properties.has(key.value)) {
-      return this.properties.get(key.value)!
-    }
-    if (!this.prototype.isNull()) {
-      return this.prototype.get(key)
-    }
-    return JSUndefined.instance
-  }
-
-  set(key: JSString | JSNumber, value: VObject) {
-    this.properties.set(key.value, value)
-    return value
-  }
-}
-
-export class JSValue extends VObject {
-  constructor(private ref: JSObject) {
-    super()
-  }
-
-  debugValue() {
-    return this.ref.debugValue()
-  }
-
-  get type() {
-    return ObjectType.Value
-  }
-}
-
-export class JSNumber extends JSPrimitive {
-  constructor(public value: number) {
-    super()
-  }
-
-  get type() {
-    return ObjectType.Number
-  }
-
-  asBoolean() {
-    return new JSBoolean(!!this.value)
-  }
-}
-
-export class JSString extends JSPrimitive {
-  constructor(public value: string) {
-    super()
-  }
-
-  get type() {
-    return ObjectType.String
-  }
-}
-
-export class JSBoolean extends JSPrimitive {
-  constructor(public value: boolean) {
-    super()
-  }
-
-  get type() {
-    return ObjectType.Boolean
-  }
-
-  asBoolean() {
-    return this
   }
 }
 
@@ -211,13 +104,102 @@ export class JSNull extends JSPrimitive {
   static instance = new JSNull()
 }
 
+export class JSObject extends VObject {
+  private rc: number = 0
+
+  constructor(public properties: Map<string | number, VObject> = new Map()) {
+    super()
+  }
+
+  get type() {
+    return ObjectType.Object
+  }
+
+  debugValue(): any {
+    return this
+  }
+
+  isObject(): this is JSObject {
+    return true
+  }
+
+  isArray(): this is JSArray {
+    return this.type === ObjectType.Array
+  }
+
+  isFunction(): this is JSFunction {
+    return this.type === ObjectType.Function
+  }
+
+  asArray(): JSArray {
+    throw new Error('invalid cast')
+  }
+
+  get(key: JSString | JSNumber): VObject | JSUndefined {
+    if (this.properties.has(key.value)) {
+      return this.properties.get(key.value)!
+    }
+
+    const protoType = this.get(new JSString('prototype'))
+    if (protoType.isObject()) {
+      return protoType.get(key)
+    }
+    return JSUndefined.instance
+  }
+
+  set(key: JSString | JSNumber, value: VObject) {
+    this.properties.set(key.value, value)
+    return value
+  }
+}
+
+export class JSNumber extends JSPrimitive {
+  constructor(public value: number) {
+    super()
+  }
+
+  get type() {
+    return ObjectType.Number
+  }
+
+  asBoolean() {
+    return new JSBoolean(!!this.value)
+  }
+}
+
+export class JSString extends JSPrimitive {
+  constructor(public value: string) {
+    super()
+  }
+
+  static empty = new JSString('')
+
+  get type() {
+    return ObjectType.String
+  }
+}
+
+export class JSBoolean extends JSPrimitive {
+  constructor(public value: boolean) {
+    super()
+  }
+
+  get type() {
+    return ObjectType.Boolean
+  }
+
+  asBoolean() {
+    return this
+  }
+}
+
 export class JSFunction extends JSObject {
   constructor(
-    public name: JSString,
-    public pos: number,
-    public upvalue: Map<string, VObject>
+    public name: JSString = JSString.empty,
+    public pos: number = -1,
+    public upvalue: Map<string, VObject> = new Map()
   ) {
-    super()
+    super(new Map())
   }
 
   isNative(): this is JSNativeFunction {
@@ -234,7 +216,7 @@ export class JSNativeFunction extends JSFunction {
     public name: JSString,
     public func: (...args: VObject[]) => VObject
   ) {
-    super(name, 0, new Map())
+    super(name)
   }
 
   isNative(): this is JSNativeFunction {

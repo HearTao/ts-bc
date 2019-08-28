@@ -1,17 +1,11 @@
 import VirtualMachine from './vm'
 import { gen } from './gen'
 
-export { default as default } from './vm'
+export { default } from './vm'
 export { gen } from './gen'
 
 const code = `
-var a = {
-  a: 1,
-  foo: function f () {
-    return this.a
-  }
-};
-a.foo()
+[Object.__proto__ === Function.prototype, Function.prototype === Function.__proto__, Function.prototype.__proto__ === Object.prototype]
 `
 const [op, value] = gen(code)
 

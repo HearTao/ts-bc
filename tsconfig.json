@@ -8,10 +8,14 @@
         "rootDir": "src",
         "outDir": "libs",
         "declaration": true,
-        "sourceMap": true
+        "sourceMap": true,
+        "rootDirs": [
+            "./src"
+        ]
     },
     "exclude": [
         "webpack.config.ts",
-        "tests"
+        "tests",
+        "libs"
     ]
 }

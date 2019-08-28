@@ -192,9 +192,11 @@ export default class VirtualMachine {
         case OpCode.StrictEQ: {
           const right = this.popStack()
           const left = this.popStack()
-          this.stack.push(
-            new JSBoolean(left.asNumber().value === right.asNumber().value)
-          )
+          if (left.isNumber() && right.isNumber()) {
+            this.stack.push(new JSBoolean(left.value === right.value))
+          } else {
+            this.stack.push(new JSBoolean(left === right))
+          }
           break
         }
 

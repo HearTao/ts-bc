@@ -289,6 +289,22 @@ test(`should work with Object.keys`, () => {
   ).toStrictEqual(eval(code).sort())
 })
 
+test(`should work with '__proto__' and 'prototype'`, () => {
+  const code = `
+    [Object.__proto__ === Function.prototype, Function.prototype === Function.__proto__, Function.prototype.__proto__ === Object.prototype]
+  `
+
+  const [op, value] = gen(code)
+  const vm = new VirtualMachine(op, value)
+
+  expect(
+    vm
+      .exec()
+      .value.debugValue()
+      .sort()
+  ).toStrictEqual(eval(code).sort())
+})
+
 test(`should work with step exec`, () => {
   const code = '0 ? 2 : 0 ? 3 : 4'
   stepRun(code)
