@@ -403,6 +403,17 @@ test(`should work with apply`, () => {
   run(code)
 })
 
+test(`should work with for statement`, () => {
+  const code = `
+  let s = 0
+  for (let i = 0; i < 100; ++i) {
+    s += i
+  }
+  s
+`
+  run(code)
+})
+
 test(`should work with step exec`, () => {
   const code = '0 ? 2 : 0 ? 3 : 4'
   stepRun(code)

@@ -5,13 +5,11 @@ export { default } from './vm'
 export { gen } from './gen'
 
 const code = `
-const a = {
-  foo: 1
-}
-function f (b) {
-  return this.foo + b + 2
-}
-f.apply(a, [42])
+let s = 0
+  for (let i = 0; i < 101; ++i) {
+    s += i
+  }
+  s
 `
 const [op, value] = gen(code)
 

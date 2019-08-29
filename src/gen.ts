@@ -1,7 +1,7 @@
 import * as ts from 'typescript'
 import { OpCode, OpValue, Label } from './opcode'
 import { EnvironmentType, ObjectMemberType } from './types'
-import { JSString, VObject, JSNumber } from './value'
+import { JSString, VObject, JSNumber, JSBoolean } from './value'
 import createVHost from 'ts-ez-host'
 import { assertNever } from './utils'
 
@@ -61,6 +61,9 @@ export function gen(code: string): [(OpCode | OpValue)[], VObject[]] {
       case ts.SyntaxKind.WhileStatement:
         visitWhileStatement(<ts.WhileStatement>node)
         break
+      case ts.SyntaxKind.ForStatement:
+        visitForStatement(<ts.ForStatement>node)
+        break
       case ts.SyntaxKind.Identifier:
         visitIdentifier(<ts.Identifier>node)
         break
@@ -117,6 +120,33 @@ export function gen(code: string): [(OpCode | OpValue)[], VObject[]] {
     value.push(v)
     op.push(OpCode.Const)
     op.push({ value: value.length - 1 })
+  }
+
+  function visitForStatement(stmt: ts.ForStatement) {
+    const label1 = createLabel()
+    const label2 = createLabel()
+
+    op.push(OpCode.EnterBlockScope)
+    stmt.initializer && visitor(stmt.initializer)
+
+    updateLabel(label1)
+    if (stmt.condition) {
+      visitor(stmt.condition)
+    } else {
+      pushConst(new JSBoolean(true))
+    }
+
+    op.push(OpCode.JumpIfFalse)
+    op.push(label2)
+
+    visitor(stmt.statement)
+
+    stmt.incrementor && visitor(stmt.incrementor)
+    op.push(OpCode.Jump)
+    op.push(label1)
+
+    updateLabel(label2)
+    op.push(OpCode.ExitBlockScope)
   }
 
   function visitNewExpression(expr: ts.NewExpression) {
