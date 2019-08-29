@@ -6,7 +6,8 @@ import {
   ExecResult,
   Environment,
   EnvironmentType,
-  StackFrame
+  StackFrame,
+  JSPropertyDescriptor
 } from './types'
 import {
   VObject,
@@ -419,7 +420,7 @@ export default class VirtualMachine {
           const protoType = callee.getOwn(new JSString('prototype'))
 
           const self = new JSObject()
-          self.set(new JSString('__proto__'), protoType)
+          self.setDescriptor(new JSString('__proto__'), new JSPropertyDescriptor(protoType, false))
           this.stack.push(self)
           this.call(callee, args, self)
           break

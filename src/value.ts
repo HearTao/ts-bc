@@ -1,4 +1,5 @@
 import { assertDef } from "./utils";
+import { JSPropertyDescriptor } from "./types";
 
 export enum ObjectType {
   Number,
@@ -108,11 +109,18 @@ export class JSNull extends JSPrimitive {
 
 export class JSObject extends VObject {
   private rc: number = 0
+  public properties: Map<string | number, JSPropertyDescriptor> = new Map()
 
-  constructor(public properties: Map<string | number, VObject> = new Map()) {
+  constructor(
+    properties: Map<string | number, VObject> = new Map()
+  ) {
     super()
 
-    this.set(new JSString('__proto__'), JSObject.protoType || JSNull.instance)
+    properties.forEach((value, key) => {
+      this.properties.set(key, new JSPropertyDescriptor(value))
+    })
+
+    this.setDescriptor(new JSString('__proto__'), new JSPropertyDescriptor(JSObject.protoType || JSNull.instance, false))
   }
 
   static protoType: JSObject | undefined
@@ -143,7 +151,8 @@ export class JSObject extends VObject {
 
   get(key: JSString | JSNumber): VObject | JSUndefined {
     if (this.properties.has(key.value)) {
-      return this.properties.get(key.value)!
+      const descriptor = this.properties.get(key.value)!
+      return descriptor.value!
     }
 
     const protoType = this.getOwn(new JSString('__proto__'))
@@ -155,14 +164,24 @@ export class JSObject extends VObject {
 
   getOwn(key: JSString | JSNumber): VObject | JSUndefined {
     if (this.properties.has(key.value)) {
-      return this.properties.get(key.value)!
+      const descriptor = this.properties.get(key.value)!
+      return descriptor.value!
     }
     return JSUndefined.instance
   }
 
   set(key: JSString | JSNumber, value: VObject) {
-    this.properties.set(key.value, value)
-    return value
+    if (this.properties.has(key.value)) {
+      const descriptor = this.properties.get(key.value)!
+      descriptor.value = value
+      this.setDescriptor(key, descriptor)
+    } else {
+      this.setDescriptor(key, new JSPropertyDescriptor(value))
+    }
+  }
+
+  setDescriptor(key: JSString | JSNumber, descriptor: JSPropertyDescriptor) {
+    this.properties.set(key.value, descriptor)
   }
 }
 
@@ -213,8 +232,9 @@ export class JSFunction extends JSObject {
     public upvalue: Map<string, VObject> = new Map()
   ) {
     super(new Map())
-    this.set(new JSString('__proto__'), assertDef(JSFunction.protoType))
-    this.set(new JSString('prototype'), new JSObject())
+    
+    this.setDescriptor(new JSString('__proto__'), new JSPropertyDescriptor(assertDef(JSFunction.protoType), false))
+    this.setDescriptor(new JSString('prototype'), new JSPropertyDescriptor(new JSObject(), false))
   }
 
   static protoType: JSObject

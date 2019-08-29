@@ -1,5 +1,5 @@
 import { OpCode, OpValue } from './opcode'
-import { VObject, JSUndefined } from './value'
+import { VObject, JSUndefined, JSFunction } from './value'
 
 export interface VMDump {
   stack: VObject[]
@@ -53,4 +53,16 @@ export interface StackFrame {
   entry: number
   environments: LexerEnvironment | GlobalEnvironment
   thisObject: VObject | JSUndefined
+}
+
+export class JSPropertyDescriptor {
+  constructor(
+    public value?: VObject,
+    public enumerable: boolean = true,
+    public writable: boolean = true,
+    public getter?: JSFunction,
+    public setter?: JSFunction
+  ) {
+    
+  }
 }
