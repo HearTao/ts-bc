@@ -70,3 +70,7 @@ export enum ObjectMemberType {
   getter,
   setter
 }
+
+export interface Callable {
+  call(callee: JSFunction, args: VObject[], thisObject: VObject): void
+}

@@ -237,7 +237,7 @@ export class JSFunction extends JSObject {
 
   static protoType: JSObject
 
-  isNative(): this is JSNativeFunction {
+  isBridge(): this is JSBirdgeFunction {
     return false
   }
 
@@ -246,12 +246,33 @@ export class JSFunction extends JSObject {
   }
 }
 
-export class JSNativeFunction extends JSFunction {
+export class JSBirdgeFunction extends JSFunction {
+  constructor(
+    public name: JSString,
+    public func: (this: VObject, ...args: VObject[]) => void
+  ) {
+    super(name)
+  }
+
+  isBridge(): this is JSBirdgeFunction {
+    return true
+  }
+
+  isNative(): this is JSNativeFunction {
+    return false
+  }
+
+  apply(self: VObject, args: VObject[]) {
+    this.func.apply(self, args)
+  }
+}
+
+export class JSNativeFunction extends JSBirdgeFunction {
   constructor(
     public name: JSString,
     public func: (this: VObject, ...args: VObject[]) => VObject
   ) {
-    super(name)
+    super(name, func)
   }
 
   isNative(): this is JSNativeFunction {

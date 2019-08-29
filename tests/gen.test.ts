@@ -377,6 +377,32 @@ test(`should work with array keys`, () => {
   run(code)
 })
 
+test(`should work with call`, () => {
+  const code = `
+  const a = {
+    foo: 1
+  }
+  function f (a) {
+    return this.foo + a + 2
+  }
+  f.call(a, 42)
+`
+  run(code)
+})
+
+test(`should work with apply`, () => {
+  const code = `
+  const a = {
+    foo: 1
+  }
+  function f (a) {
+    return this.foo + a + 2
+  }
+  f.apply(a, [42])
+`
+  run(code)
+})
+
 test(`should work with step exec`, () => {
   const code = '0 ? 2 : 0 ? 3 : 4'
   stepRun(code)

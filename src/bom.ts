@@ -5,17 +5,19 @@ import {
   JSString,
   JSArray,
   JSFunction,
-  JSNumber
+  JSNumber,
+  JSUndefined,
+  JSBirdgeFunction
 } from './value'
-import { JSPropertyDescriptor } from './types'
+import { JSPropertyDescriptor, Callable } from './types'
 
-export function init(valueTable: Map<string, VObject>) {
-  initPrototype(valueTable)
+export function init(vm: Callable, valueTable: Map<string, VObject>) {
+  initPrototype(vm, valueTable)
 
   initArrayConstructor(valueTable)
 }
 
-export function initPrototype(valueTable: Map<string, VObject>) {
+export function initPrototype(vm: Callable, valueTable: Map<string, VObject>) {
   const metaObjectProto = new JSObject()
   JSObject.protoType = metaObjectProto
 
@@ -30,7 +32,7 @@ export function initPrototype(valueTable: Map<string, VObject>) {
   )
 
   initMetaObjectProto(metaObjectProto)
-  initMetaFunctionProto(metaFunctionProto)
+  initMetaFunctionProto(vm, metaFunctionProto)
 
   const funcCtor = new JSNativeFunction(JSString.empty, () => new JSObject())
   funcCtor.setDescriptor(
@@ -51,7 +53,33 @@ export function initPrototype(valueTable: Map<string, VObject>) {
 
 function initMetaObjectProto(metaObjectProto: JSObject) {}
 
-function initMetaFunctionProto(metaObjectProto: JSObject) {}
+function initMetaFunctionProto(vm: Callable, metaFunctionProto: JSObject) {
+  metaFunctionProto.set(
+    new JSString('call'),
+    new JSBirdgeFunction(new JSString('call'), function(self, ...args) {
+      if (this.isObject() && this.isFunction()) {
+        vm.call(this, args, self)
+        return
+      }
+      throw new Error('is not callable')
+    })
+  )
+  metaFunctionProto.set(
+    new JSString('apply'),
+    new JSBirdgeFunction(new JSString('apply'), function(self, args) {
+      if (
+        this.isObject() &&
+        this.isFunction() &&
+        args.isObject() &&
+        args.isArray()
+      ) {
+        vm.call(this, args.items, self)
+        return
+      }
+      throw new Error('is not callable')
+    })
+  )
+}
 
 function initObjectConstructor(objectCtor: JSNativeFunction) {
   objectCtor.set(

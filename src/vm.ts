@@ -8,7 +8,8 @@ import {
   EnvironmentType,
   StackFrame,
   JSPropertyDescriptor,
-  ObjectMemberType
+  ObjectMemberType,
+  Callable
 } from './types'
 import {
   VObject,
@@ -21,9 +22,9 @@ import {
   JSString,
   JSObject
 } from './value'
-import { initPrototype, init } from './bom'
+import { init } from './bom'
 
-export default class VirtualMachine {
+export default class VirtualMachine implements Callable {
   private stack: VObject[] = []
   private frames: StackFrame[] = []
   private environments: Environment[] = []
@@ -43,7 +44,7 @@ export default class VirtualMachine {
       valueTable
     })
 
-    init(valueTable)
+    init(this, valueTable)
   }
 
   private popStack() {
@@ -501,8 +502,12 @@ export default class VirtualMachine {
   }
 
   call(callee: JSFunction, args: VObject[], thisObject: VObject) {
-    if (callee.isNative()) {
-      this.stack.push(callee.apply(thisObject, args))
+    if (callee.isBridge()) {
+      if (callee.isNative()) {
+        this.stack.push(callee.apply(thisObject, args.reverse()))
+      } else {
+        callee.apply(thisObject, args.reverse())
+      }
       return
     }
 
