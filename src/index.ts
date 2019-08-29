@@ -5,7 +5,8 @@ export { default } from './vm'
 export { gen } from './gen'
 
 const code = `
-[Object.__proto__ === Function.prototype, Function.prototype === Function.__proto__, Function.prototype.__proto__ === Object.prototype]
+var a = [1, 2, 3];
+a[0]
 `
 const [op, value] = gen(code)
 

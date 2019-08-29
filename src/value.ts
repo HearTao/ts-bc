@@ -1,5 +1,5 @@
-import { assertDef } from "./utils";
-import { JSPropertyDescriptor } from "./types";
+import { assertDef } from './utils'
+import { JSPropertyDescriptor } from './types'
 
 export enum ObjectType {
   Number,
@@ -111,16 +111,17 @@ export class JSObject extends VObject {
   private rc: number = 0
   public properties: Map<string | number, JSPropertyDescriptor> = new Map()
 
-  constructor(
-    properties: Map<string | number, VObject> = new Map()
-  ) {
+  constructor(properties: Map<string | number, VObject> = new Map()) {
     super()
 
     properties.forEach((value, key) => {
       this.properties.set(key, new JSPropertyDescriptor(value))
     })
 
-    this.setDescriptor(new JSString('__proto__'), new JSPropertyDescriptor(JSObject.protoType || JSNull.instance, false))
+    this.setDescriptor(
+      new JSString('__proto__'),
+      new JSPropertyDescriptor(JSObject.protoType || JSNull.instance, false)
+    )
   }
 
   static protoType: JSObject | undefined
@@ -150,19 +151,6 @@ export class JSObject extends VObject {
   }
 
   get(key: JSString | JSNumber): VObject | JSUndefined {
-    if (this.properties.has(key.value)) {
-      const descriptor = this.properties.get(key.value)!
-      return descriptor.value!
-    }
-
-    const protoType = this.getOwn(new JSString('__proto__'))
-    if (protoType.isObject()) {
-      return protoType.get(key)
-    }
-    return JSUndefined.instance
-  }
-
-  getOwn(key: JSString | JSNumber): VObject | JSUndefined {
     if (this.properties.has(key.value)) {
       const descriptor = this.properties.get(key.value)!
       return descriptor.value!
@@ -232,9 +220,15 @@ export class JSFunction extends JSObject {
     public upvalue: Map<string, VObject> = new Map()
   ) {
     super(new Map())
-    
-    this.setDescriptor(new JSString('__proto__'), new JSPropertyDescriptor(assertDef(JSFunction.protoType), false))
-    this.setDescriptor(new JSString('prototype'), new JSPropertyDescriptor(new JSObject(), false))
+
+    this.setDescriptor(
+      new JSString('__proto__'),
+      new JSPropertyDescriptor(assertDef(JSFunction.protoType), false)
+    )
+    this.setDescriptor(
+      new JSString('prototype'),
+      new JSPropertyDescriptor(new JSObject(), false)
+    )
   }
 
   static protoType: JSObject
@@ -271,14 +265,7 @@ export class JSArray extends JSObject {
   }
 
   constructor(private items: VObject[]) {
-    super()
-  }
-
-  get(idx: JSNumber) {
-    if (idx.value < 0 || idx.value >= this.items.length) {
-      return JSUndefined.instance
-    }
-    return this.items[idx.value]
+    super(new Map(items.map((item, i) => [i, item])))
   }
 
   asArray() {

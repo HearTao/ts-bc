@@ -6,7 +6,7 @@ import {
   JSArray,
   JSFunction
 } from './value'
-import { JSPropertyDescriptor } from './types';
+import { JSPropertyDescriptor } from './types'
 
 export function init(valueTable: Map<string, VObject>) {
   initPrototype(valueTable)
@@ -23,16 +23,25 @@ export function initPrototype(valueTable: Map<string, VObject>) {
     () => new JSFunction()
   )
   JSFunction.protoType = metaFunctionProto
-  metaFunctionProto.setDescriptor(new JSString('__proto__'), new JSPropertyDescriptor(metaObjectProto, false))
+  metaFunctionProto.setDescriptor(
+    new JSString('__proto__'),
+    new JSPropertyDescriptor(metaObjectProto, false)
+  )
 
   initMetaObjectProto(metaObjectProto)
   initMetaFunctionProto(metaFunctionProto)
 
   const funcCtor = new JSNativeFunction(JSString.empty, () => new JSObject())
-  funcCtor.setDescriptor(new JSString('prototype'), new JSPropertyDescriptor(metaFunctionProto, false))
+  funcCtor.setDescriptor(
+    new JSString('prototype'),
+    new JSPropertyDescriptor(metaFunctionProto, false)
+  )
 
   const objectCtor = new JSNativeFunction(JSString.empty, () => new JSObject())
-  objectCtor.setDescriptor(new JSString('prototype'), new JSPropertyDescriptor(metaObjectProto, false))
+  objectCtor.setDescriptor(
+    new JSString('prototype'),
+    new JSPropertyDescriptor(metaObjectProto, false)
+  )
 
   initObjectConstructor(objectCtor)
   valueTable.set('Function', funcCtor)
@@ -49,7 +58,9 @@ function initObjectConstructor(objectCtor: JSNativeFunction) {
     new JSNativeFunction(new JSString('keys'), (...[obj]: VObject[]) => {
       if (obj.isObject()) {
         return new JSArray(
-          Array.from(obj.properties.entries()).filter(([_, value]) => !!value.enumerable).map(([key]) => new JSString(key.toString()))
+          Array.from(obj.properties.entries())
+            .filter(([_, value]) => !!value.enumerable)
+            .map(([key]) => new JSString(key.toString()))
         )
       }
       return new JSArray([])

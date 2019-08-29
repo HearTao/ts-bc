@@ -274,7 +274,7 @@ export default class VirtualMachine {
           const obj = this.popStack()
 
           if (obj.isObject() && (idx.isNumber() || idx.isString())) {
-            this.stack.push(obj.get(idx))
+            this.getProp(obj, idx)
           } else {
             throw new Error('not supported index access')
           }
@@ -326,7 +326,7 @@ export default class VirtualMachine {
           const idx = this.popStack()
           const obj = this.popStack()
           if (obj.isObject() && (idx.isNumber() || idx.isString())) {
-            this.stack.push(obj.get(idx))
+            this.getProp(obj, idx)
           } else {
             throw new Error('not supported index access')
           }
@@ -417,10 +417,13 @@ export default class VirtualMachine {
             args.push(this.popStack())
           }
 
-          const protoType = callee.getOwn(new JSString('prototype'))
+          const protoType = callee.get(new JSString('prototype'))
 
           const self = new JSObject()
-          self.setDescriptor(new JSString('__proto__'), new JSPropertyDescriptor(protoType, false))
+          self.setDescriptor(
+            new JSString('__proto__'),
+            new JSPropertyDescriptor(protoType, false)
+          )
           this.stack.push(self)
           this.call(callee, args, self)
           break
@@ -451,14 +454,14 @@ export default class VirtualMachine {
           const a = this.popStack()
           const b = this.popStack()
           this.stack.push(b, a, b)
-          break;
+          break
         }
 
         case OpCode.Swap: {
           const a = this.popStack()
           const b = this.popStack()
           this.stack.push(a, b)
-          break;
+          break
         }
 
         case OpCode.Eof:
@@ -504,5 +507,21 @@ export default class VirtualMachine {
     this.stack.push(new JSArray(args))
     args.forEach(x => this.stack.push(x))
     return
+  }
+
+  getProp(obj: JSObject, key: JSString | JSNumber) {
+    if (obj.properties.has(key.value)) {
+      const descriptor = obj.properties.get(key.value)!
+      this.stack.push(descriptor.value!)
+      return
+    }
+
+    const protoType = obj.get(new JSString('__proto__'))
+    if (protoType.isObject()) {
+      this.getProp(protoType, key)
+      return
+    }
+
+    this.stack.push(JSUndefined.instance)
   }
 }

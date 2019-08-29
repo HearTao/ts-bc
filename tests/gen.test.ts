@@ -344,7 +344,7 @@ test(`should work with prototype`, () => {
   const a = new A()
   a.foo()
 `
-run(code)
+  run(code)
 })
 
 test(`should work with step exec`, () => {

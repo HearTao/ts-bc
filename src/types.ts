@@ -62,7 +62,5 @@ export class JSPropertyDescriptor {
     public writable: boolean = true,
     public getter?: JSFunction,
     public setter?: JSFunction
-  ) {
-    
-  }
+  ) {}
 }
