@@ -1,6 +1,6 @@
 import * as ts from 'typescript'
 import { OpCode, OpValue, Label } from './opcode'
-import { EnvironmentType } from './types'
+import { EnvironmentType, ObjectMemberType } from './types'
 import { JSString, VObject, JSNumber } from './value'
 import createVHost from 'ts-ez-host'
 import { assertNever } from './utils'
@@ -152,26 +152,39 @@ export function gen(code: string): [(OpCode | OpValue)[], VObject[]] {
   }
 
   function visitObjectLiteralExpression(obj: ts.ObjectLiteralExpression) {
-    obj.properties.forEach(prop => {
-      if (ts.isPropertyAssignment(prop)) {
-        visitor(prop.initializer)
-
-        switch (prop.name.kind) {
-          case ts.SyntaxKind.Identifier:
-            pushConst(new JSString(prop.name.text))
-            break
-          case ts.SyntaxKind.ComputedPropertyName:
-          case ts.SyntaxKind.StringLiteral:
-          case ts.SyntaxKind.NumericLiteral:
-            visitor(prop.name)
-            break
-          default:
-            assertNever(prop.name)
-        }
-      }
-    })
+    obj.properties.forEach(visitObjectLiteralProperty)
     op.push(OpCode.CreateObject)
     op.push({ value: obj.properties.length })
+  }
+
+  function visitObjectLiteralProperty(prop: ts.ObjectLiteralElementLike) {
+    switch (prop.kind) {
+      case ts.SyntaxKind.PropertyAssignment: {
+        visitor(prop.initializer)
+        visitPropertyName(prop.name)
+        pushConst(new JSNumber(ObjectMemberType.property))
+        break
+      }
+      case ts.SyntaxKind.GetAccessor: {
+        visitFunctionLikeDeclaration(prop)
+        visitPropertyName(prop.name)
+        pushConst(new JSNumber(ObjectMemberType.getter))
+        break
+      }
+    }
+  }
+
+  function visitPropertyName(name: ts.PropertyName) {
+    switch (name.kind) {
+      case ts.SyntaxKind.Identifier:
+        pushConst(new JSString(name.text))
+        break
+      case ts.SyntaxKind.ComputedPropertyName:
+      case ts.SyntaxKind.StringLiteral:
+      case ts.SyntaxKind.NumericLiteral:
+        visitor(name)
+        break
+    }
   }
 
   function visitArrayLiteralExpression(arr: ts.ArrayLiteralExpression) {

@@ -7,7 +7,8 @@ import {
   Environment,
   EnvironmentType,
   StackFrame,
-  JSPropertyDescriptor
+  JSPropertyDescriptor,
+  ObjectMemberType
 } from './types'
 import {
   VObject,
@@ -372,18 +373,34 @@ export default class VirtualMachine {
         }
 
         case OpCode.CreateObject: {
+          const obj = new JSObject()
           const len = this.popCode()
-          const properties: Map<string | number, VObject> = new Map()
           for (let i = 0; i < len; ++i) {
+            const type = this.popStack()
             const name = this.popStack()
             const initializer = this.popStack()
-            if (name.isString() || name.isNumber()) {
-              properties.set(name.value, initializer)
+            if (type.isNumber() && (name.isString() || name.isNumber())) {
+              switch (type.value) {
+                case ObjectMemberType.property:
+                  obj.set(name, initializer)
+                  break
+                case ObjectMemberType.getter:
+                  if (initializer.isObject() && initializer.isFunction()) {
+                    const descriptor =
+                      obj.getDescriptor(name) ||
+                      new JSPropertyDescriptor(undefined, true, true)
+                    descriptor.getter = initializer
+                    obj.setDescriptor(name, descriptor)
+                  } else {
+                    throw new Error('invalid getter')
+                  }
+                  break
+              }
             } else {
               throw new Error('invalid object key')
             }
           }
-          this.stack.push(new JSObject(properties))
+          this.stack.push(obj)
           break
         }
 
@@ -512,7 +529,11 @@ export default class VirtualMachine {
   getProp(obj: JSObject, key: JSString | JSNumber) {
     if (obj.properties.has(key.value)) {
       const descriptor = obj.properties.get(key.value)!
-      this.stack.push(descriptor.value!)
+      if (descriptor.getter) {
+        this.call(descriptor.getter, [], obj)
+      } else {
+        this.stack.push(descriptor.value!)
+      }
       return
     }
 

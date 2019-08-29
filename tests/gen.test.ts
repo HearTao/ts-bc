@@ -347,6 +347,18 @@ test(`should work with prototype`, () => {
   run(code)
 })
 
+test(`should work with getter`, () => {
+  const code = `
+  const a = {
+    get foo () {
+      return 42
+    }
+  }
+  a.foo
+`
+  run(code)
+})
+
 test(`should work with step exec`, () => {
   const code = '0 ? 2 : 0 ? 3 : 4'
   stepRun(code)

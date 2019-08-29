@@ -168,6 +168,10 @@ export class JSObject extends VObject {
     }
   }
 
+  getDescriptor(key: JSString | JSNumber): JSPropertyDescriptor | undefined {
+    return this.properties.get(key.value)
+  }
+
   setDescriptor(key: JSString | JSNumber, descriptor: JSPropertyDescriptor) {
     this.properties.set(key.value, descriptor)
   }

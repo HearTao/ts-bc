@@ -64,3 +64,9 @@ export class JSPropertyDescriptor {
     public setter?: JSFunction
   ) {}
 }
+
+export enum ObjectMemberType {
+  property,
+  getter,
+  setter
+}
