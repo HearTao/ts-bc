@@ -362,6 +362,7 @@ export default class VirtualMachine {
             pos.asNumber().value,
             upValue
           )
+          func.set(new JSString('prototype'), new JSObject())
           this.define(name.asString().value, func, EnvironmentType.lexer)
           this.stack.push(func)
 
@@ -432,6 +433,31 @@ export default class VirtualMachine {
         case OpCode.Undefined: {
           this.stack.push(JSUndefined.instance)
           break
+        }
+
+        case OpCode.Drop: {
+          this.stack.pop()
+          break
+        }
+
+        case OpCode.Dup: {
+          const value = this.popStack()
+          this.stack.push(value, value)
+          break
+        }
+
+        case OpCode.Over: {
+          const a = this.popStack()
+          const b = this.popStack()
+          this.stack.push(b, a, b)
+          break;
+        }
+
+        case OpCode.Swap: {
+          const a = this.popStack()
+          const b = this.popStack()
+          this.stack.push(a, b)
+          break;
         }
 
         case OpCode.Eof:

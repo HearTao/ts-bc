@@ -12,6 +12,12 @@ export enum OpCode {
   StrictNEQ,
 
   Push,
+
+  Drop,
+  Dup,
+  Over,
+  Swap,
+
   Def,
   DefBlock,
   Load,
