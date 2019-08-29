@@ -120,12 +120,23 @@ export function gen(code: string): [(OpCode | OpValue)[], VObject[]] {
   }
 
   function visitNewExpression(expr: ts.NewExpression) {
+    const label1 = createLabel()
+
     const args = expr.arguments || ([] as ts.Expression[])
     args.forEach(visitor)
     op.push(OpCode.Push)
     op.push({ value: args.length })
     visitor(expr.expression)
     op.push(OpCode.New)
+    op.push(OpCode.Dup)
+
+    op.push(OpCode.Undefined)
+    op.push(OpCode.StrictEQ)
+
+    op.push(OpCode.JumpIfFalse)
+    op.push(label1)
+    op.push(OpCode.Drop)
+    updateLabel(label1)
   }
 
   function visitThisExpression(expr: ts.ThisExpression) {

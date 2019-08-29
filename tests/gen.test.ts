@@ -317,6 +317,36 @@ test(`should work with new Ctor`, () => {
   run(code)
 })
 
+test(`should work with return new Ctor`, () => {
+  const code = `
+    function A () {
+      const self = {};
+      self.hehe = 1;
+      return self
+    }
+
+    const a = new A()
+    a.hehe
+  `
+  run(code)
+})
+
+test(`should work with prototype`, () => {
+  const code = `
+  function A () {
+    this.hehe = 1
+  }
+
+  A.prototype.foo = function f () {
+    return this.hehe + 1
+  }
+
+  const a = new A()
+  a.foo()
+`
+run(code)
+})
+
 test(`should work with step exec`, () => {
   const code = '0 ? 2 : 0 ? 3 : 4'
   stepRun(code)

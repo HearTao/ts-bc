@@ -7,7 +7,7 @@
   "scripts": {
     "start": "tsc -w",
     "build": "tsc & webpack",
-    "test": "jest --testPathIgnorePatterns browser",
+    "test": "jest --testPathIgnorePatterns browser --testPathIgnorePatterns libs",
     "test:browser": "webpack && jest",
     "prettier": "prettier --config ./prettier.json --write ./types/**/* ./src/* ./src/**/* ./tests/**/*"
   },
