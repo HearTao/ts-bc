@@ -64,6 +64,10 @@ export function gen(code: string): [(OpCode | OpValue)[], VObject[]] {
       case ts.SyntaxKind.ForStatement:
         visitForStatement(<ts.ForStatement>node)
         break
+      case ts.SyntaxKind.ForInStatement:
+      case ts.SyntaxKind.ForOfStatement:
+        visitForInOrOfStatement(<ts.ForInStatement>node)
+        break
       case ts.SyntaxKind.Identifier:
         visitIdentifier(<ts.Identifier>node)
         break
@@ -139,13 +143,70 @@ export function gen(code: string): [(OpCode | OpValue)[], VObject[]] {
     op.push(OpCode.JumpIfFalse)
     op.push(label2)
 
+    op.push(OpCode.EnterBlockScope)
     visitor(stmt.statement)
+    op.push(OpCode.ExitBlockScope)
 
     stmt.incrementor && visitor(stmt.incrementor)
     op.push(OpCode.Jump)
     op.push(label1)
 
     updateLabel(label2)
+    op.push(OpCode.ExitBlockScope)
+  }
+
+  function visitForInitializer(initializer: ts.ForInitializer) {
+    switch (initializer.kind) {
+      case ts.SyntaxKind.VariableDeclarationList:
+        const declList = <ts.VariableDeclarationList>initializer
+        declList.declarations.forEach(decl => {
+          pushConst(new JSString((<ts.Identifier>decl.name).text))
+
+          switch (getVariableEnvirementType(declList)) {
+            case EnvironmentType.block:
+              op.push(OpCode.DefBlock)
+              break
+            default:
+              op.push(OpCode.Def)
+              break
+          }
+        })
+    }
+  }
+
+  function visitForInOrOfStatement(stmt: ts.ForInOrOfStatement) {
+    const label1 = createLabel()
+    const label2 = createLabel()
+
+    visitor(stmt.expression)
+    if (ts.isForInStatement(stmt)) {
+      op.push(OpCode.ForInStart)
+    } else {
+      op.push(OpCode.ForOfStart)
+    }
+
+    op.push(OpCode.EnterBlockScope)
+
+    updateLabel(label1)
+    op.push(OpCode.Dup)
+    if (ts.isForInStatement(stmt)) {
+      op.push(OpCode.ForInNext)
+    } else {
+      op.push(OpCode.ForOfNext)
+    }
+    op.push(OpCode.JumpIfTrue)
+    op.push(label2)
+
+    visitForInitializer(stmt.initializer)
+
+    op.push(OpCode.EnterBlockScope)
+    visitor(stmt.statement)
+    op.push(OpCode.ExitBlockScope)
+
+    op.push(OpCode.Jump)
+    op.push(label1)
+    updateLabel(label2)
+
     op.push(OpCode.ExitBlockScope)
   }
 

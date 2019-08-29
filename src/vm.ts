@@ -20,7 +20,8 @@ import {
   JSNull,
   JSFunction,
   JSString,
-  JSObject
+  JSObject,
+  JSForInOrOfIterator
 } from './value'
 import { init } from './bom'
 
@@ -134,7 +135,7 @@ export default class VirtualMachine implements Callable {
   exec(step: true): ExecResult
   exec(step?: false): DoneResult
   exec(step?: boolean): ExecResult {
-    main: while (this.cur < this.codes.length) {
+    while (this.cur < this.codes.length) {
       const op = this.codes[this.cur++]
 
       switch (op) {
@@ -192,6 +193,24 @@ export default class VirtualMachine implements Callable {
           break
         }
 
+        case OpCode.LTE: {
+          const right = this.popStack()
+          const left = this.popStack()
+          this.stack.push(
+            new JSBoolean(left.asNumber().value <= right.asNumber().value)
+          )
+          break
+        }
+
+        case OpCode.GTE: {
+          const right = this.popStack()
+          const left = this.popStack()
+          this.stack.push(
+            new JSBoolean(left.asNumber().value >= right.asNumber().value)
+          )
+          break
+        }
+
         case OpCode.StrictEQ: {
           const right = this.popStack()
           const left = this.popStack()
@@ -223,6 +242,15 @@ export default class VirtualMachine implements Callable {
           const cond = this.popStack()
           const pos = this.popCode()
           if (!cond.asBoolean().value) {
+            this.cur = pos
+          }
+          break
+        }
+
+        case OpCode.JumpIfTrue: {
+          const cond = this.popStack()
+          const pos = this.popCode()
+          if (cond.asBoolean().value) {
             this.cur = pos
           }
           break
@@ -332,6 +360,28 @@ export default class VirtualMachine implements Callable {
           } else {
             throw new Error('not supported index access')
           }
+          break
+        }
+
+        case OpCode.ForOfStart:
+        case OpCode.ForInStart: {
+          const obj = this.popStack()
+          if (!obj.isObject()) {
+            throw new Error('not supported non-object')
+          }
+          this.stack.push(new JSForInOrOfIterator(obj))
+          break
+        }
+
+        case OpCode.ForInNext: {
+          const iter = this.popStack()
+          this.forInNext(iter as JSForInOrOfIterator)
+          break
+        }
+
+        case OpCode.ForOfNext: {
+          const iter = this.popStack()
+          this.forOfNext(iter as JSForInOrOfIterator)
           break
         }
 
@@ -457,6 +507,21 @@ export default class VirtualMachine implements Callable {
           break
         }
 
+        case OpCode.False: {
+          this.stack.push(JSBoolean.False)
+          break
+        }
+
+        case OpCode.True: {
+          this.stack.push(JSBoolean.True)
+          break
+        }
+
+        case OpCode.Zero: {
+          this.stack.push(JSNumber.Zero)
+          break
+        }
+
         case OpCode.Drop: {
           this.stack.pop()
           break
@@ -481,9 +546,6 @@ export default class VirtualMachine implements Callable {
           this.stack.push(a, b)
           break
         }
-
-        case OpCode.Eof:
-          break main
         default:
           throw new Error('unexpected op: ' + op)
       }
@@ -534,11 +596,7 @@ export default class VirtualMachine implements Callable {
   getProp(obj: JSObject, curr: JSObject, key: JSString | JSNumber) {
     if (curr.properties.has(key.value)) {
       const descriptor = curr.properties.get(key.value)!
-      if (descriptor.getter) {
-        this.call(descriptor.getter, [], obj)
-      } else {
-        this.stack.push(descriptor.value!)
-      }
+      this.getValueByDescriptor(obj, descriptor)
       return
     }
 
@@ -549,5 +607,37 @@ export default class VirtualMachine implements Callable {
     }
 
     this.stack.push(JSUndefined.instance)
+  }
+
+  getValueByDescriptor(obj: JSObject, descriptor: JSPropertyDescriptor) {
+    if (descriptor.getter) {
+      this.call(descriptor.getter, [], obj)
+    } else {
+      this.stack.push(descriptor.value!)
+    }
+  }
+
+  forInNext(iter: JSForInOrOfIterator) {
+    const keys = Array.from(iter.target.properties.entries())
+      .filter(([_, value]) => !!value.enumerable)
+      .map(([key]) => new JSString(key.toString()))
+    if (iter.curr < keys.length) {
+      this.stack.push(keys[iter.curr++])
+      this.stack.push(JSBoolean.False)
+    } else {
+      this.stack.push(JSBoolean.True)
+    }
+  }
+
+  forOfNext(iter: JSForInOrOfIterator) {
+    const values = Array.from(iter.target.properties.entries())
+      .filter(([_, value]) => !!value.enumerable)
+      .map(([_, value]) => value)
+    if (iter.curr < values.length) {
+      this.getValueByDescriptor(iter.target, values[iter.curr++])
+      this.stack.push(JSBoolean.False)
+    } else {
+      this.stack.push(JSBoolean.True)
+    }
   }
 }

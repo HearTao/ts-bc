@@ -5,11 +5,15 @@ export { default } from './vm'
 export { gen } from './gen'
 
 const code = `
-let s = 0
-  for (let i = 0; i < 101; ++i) {
-    s += i
-  }
-  s
+const o = {
+  a: 1,
+  b: 2
+}
+const result = {}
+for (let k in o) {
+  result[k] = 1
+}
+Object.keys(result)
 `
 const [op, value] = gen(code)
 
