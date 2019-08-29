@@ -6,7 +6,6 @@ import {
   JSArray,
   JSFunction
 } from './value'
-import { JSUndefined } from './value'
 
 export function init(valueTable: Map<string, VObject>) {
   initPrototype(valueTable)
@@ -16,22 +15,23 @@ export function init(valueTable: Map<string, VObject>) {
 
 export function initPrototype(valueTable: Map<string, VObject>) {
   const metaObjectProto = new JSObject()
-  initMetaObjectProto(metaObjectProto)
+  JSObject.protoType = metaObjectProto
 
   const metaFunctionProto = new JSNativeFunction(
     JSString.empty,
     () => new JSFunction()
   )
+  JSFunction.protoType = metaFunctionProto
   metaFunctionProto.set(new JSString('__proto__'), metaObjectProto)
+
+  initMetaObjectProto(metaObjectProto)
   initMetaFunctionProto(metaFunctionProto)
 
   const funcCtor = new JSNativeFunction(JSString.empty, () => new JSObject())
-  funcCtor.set(new JSString('__proto__'), metaFunctionProto)
   funcCtor.set(new JSString('prototype'), metaFunctionProto)
 
   const objectCtor = new JSNativeFunction(JSString.empty, () => new JSObject())
   objectCtor.set(new JSString('prototype'), metaObjectProto)
-  objectCtor.set(new JSString('__proto__'), metaFunctionProto)
 
   initObjectConstructor(objectCtor)
   valueTable.set('Function', funcCtor)

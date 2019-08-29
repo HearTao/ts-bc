@@ -1,3 +1,5 @@
+import { assertDef } from "./utils";
+
 export enum ObjectType {
   Number,
   String,
@@ -109,7 +111,11 @@ export class JSObject extends VObject {
 
   constructor(public properties: Map<string | number, VObject> = new Map()) {
     super()
+
+    this.set(new JSString('__proto__'), JSObject.protoType || JSNull.instance)
   }
+
+  static protoType: JSObject | undefined
 
   get type() {
     return ObjectType.Object
@@ -207,7 +213,11 @@ export class JSFunction extends JSObject {
     public upvalue: Map<string, VObject> = new Map()
   ) {
     super(new Map())
+    this.set(new JSString('__proto__'), assertDef(JSFunction.protoType))
+    this.set(new JSString('prototype'), new JSObject())
   }
+
+  static protoType: JSObject
 
   isNative(): this is JSNativeFunction {
     return false

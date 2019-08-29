@@ -19,7 +19,7 @@ import {
   JSString,
   JSObject
 } from './value'
-import { initPrototype } from './bom'
+import { initPrototype, init } from './bom'
 
 export default class VirtualMachine {
   private stack: VObject[] = []
@@ -41,7 +41,7 @@ export default class VirtualMachine {
       valueTable
     })
 
-    initPrototype(valueTable)
+    init(valueTable)
   }
 
   private popStack() {
