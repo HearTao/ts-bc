@@ -79,6 +79,18 @@ function initMetaFunctionProto(vm: Callable, metaFunctionProto: JSObject) {
       throw new Error('is not callable')
     })
   )
+  metaFunctionProto.set(
+    new JSString('bind'),
+    new JSNativeFunction(new JSString('bind'), function(self, ...args) {
+      if (this.isObject() && this.isFunction()) {
+        const callee = this
+        return new JSBirdgeFunction(JSString.empty, function() {
+          vm.call(callee, args, self)
+        })
+      }
+      throw new Error('is not callable')
+    })
+  )
 }
 
 function initObjectConstructor(objectCtor: JSNativeFunction) {

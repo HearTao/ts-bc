@@ -403,6 +403,20 @@ test(`should work with apply`, () => {
   run(code)
 })
 
+test(`should work with bind`, () => {
+  const code = `
+  const a = {
+    foo: 1
+  }
+  function f (a) {
+    return this.foo + a + 2
+  }
+  const f1 = f.bind(a, 42)
+  f1()
+`
+  run(code)
+})
+
 test(`should work with step exec`, () => {
   const code = '0 ? 2 : 0 ? 3 : 4'
   stepRun(code)
