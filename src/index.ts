@@ -5,13 +5,8 @@ export { default } from './vm'
 export { gen } from './gen'
 
 const code = `
-const a = {
-  hehe: 1,
-  get foo () {
-    return 42 + this.hehe
-  }
-}
-a.foo
+const a = [1, 2, 3]
+a.length
 `
 const [op, value] = gen(code)
 

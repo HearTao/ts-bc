@@ -249,7 +249,7 @@ export class JSFunction extends JSObject {
 export class JSNativeFunction extends JSFunction {
   constructor(
     public name: JSString,
-    public func: (...args: VObject[]) => VObject
+    public func: (this: VObject, ...args: VObject[]) => VObject
   ) {
     super(name)
   }
@@ -258,8 +258,8 @@ export class JSNativeFunction extends JSFunction {
     return true
   }
 
-  apply(args: VObject[]) {
-    return this.func.apply(null, args)
+  apply(self: VObject, args: VObject[]) {
+    return this.func.apply(self, args)
   }
 }
 
@@ -268,9 +268,16 @@ export class JSArray extends JSObject {
     return ObjectType.Array
   }
 
-  constructor(private items: VObject[]) {
+  constructor(public items: VObject[]) {
     super(new Map(items.map((item, i) => [i, item])))
+
+    this.setDescriptor(
+      new JSString('__proto__'),
+      new JSPropertyDescriptor(assertDef(JSArray.protoType), false)
+    )
   }
+
+  static protoType: JSObject
 
   asArray() {
     return this

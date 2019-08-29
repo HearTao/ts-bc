@@ -4,7 +4,8 @@ import {
   JSNativeFunction,
   JSString,
   JSArray,
-  JSFunction
+  JSFunction,
+  JSNumber
 } from './value'
 import { JSPropertyDescriptor } from './types'
 
@@ -55,7 +56,7 @@ function initMetaFunctionProto(metaObjectProto: JSObject) {}
 function initObjectConstructor(objectCtor: JSNativeFunction) {
   objectCtor.set(
     new JSString('keys'),
-    new JSNativeFunction(new JSString('keys'), (...[obj]: VObject[]) => {
+    new JSNativeFunction(new JSString('keys'), obj => {
       if (obj.isObject()) {
         return new JSArray(
           Array.from(obj.properties.entries())
@@ -69,6 +70,28 @@ function initObjectConstructor(objectCtor: JSNativeFunction) {
 }
 
 function initArrayConstructor(valueTable: Map<string, VObject>) {
-  const arrayConstructorProps = new Map<string, VObject>()
-  valueTable.set('Array', new JSObject(arrayConstructorProps))
+  const arrayCtor = new JSNativeFunction(
+    new JSString('Array'),
+    () => new JSArray([])
+  )
+
+  const araryProto = new JSObject()
+  JSArray.protoType = araryProto
+
+  araryProto.setDescriptor(
+    new JSString('length'),
+    new JSPropertyDescriptor(
+      undefined,
+      false,
+      true,
+      new JSNativeFunction(new JSString(''), function() {
+        if (this.isObject() && this.isArray()) {
+          return new JSNumber(this.items.length)
+        }
+        return new JSNumber(0)
+      })
+    )
+  )
+
+  valueTable.set('Array', arrayCtor)
 }

@@ -361,6 +361,22 @@ test(`should work with getter`, () => {
   run(code)
 })
 
+test(`should work with array length`, () => {
+  const code = `
+  const a = [1, 2 ,3]
+  a.length
+`
+  run(code)
+})
+
+test(`should work with array keys`, () => {
+  const code = `
+  const a = [1, 2 ,3]
+  Object.keys(a)
+`
+  run(code)
+})
+
 test(`should work with step exec`, () => {
   const code = '0 ? 2 : 0 ? 3 : 4'
   stepRun(code)

@@ -275,7 +275,7 @@ export default class VirtualMachine {
           const obj = this.popStack()
 
           if (obj.isObject() && (idx.isNumber() || idx.isString())) {
-            this.getProp(obj, idx)
+            this.getProp(obj, obj, idx)
           } else {
             throw new Error('not supported index access')
           }
@@ -327,7 +327,7 @@ export default class VirtualMachine {
           const idx = this.popStack()
           const obj = this.popStack()
           if (obj.isObject() && (idx.isNumber() || idx.isString())) {
-            this.getProp(obj, idx)
+            this.getProp(obj, obj, idx)
           } else {
             throw new Error('not supported index access')
           }
@@ -502,7 +502,7 @@ export default class VirtualMachine {
 
   call(callee: JSFunction, args: VObject[], thisObject: VObject) {
     if (callee.isNative()) {
-      this.stack.push(callee.apply(args))
+      this.stack.push(callee.apply(thisObject, args))
       return
     }
 
@@ -526,9 +526,9 @@ export default class VirtualMachine {
     return
   }
 
-  getProp(obj: JSObject, key: JSString | JSNumber) {
-    if (obj.properties.has(key.value)) {
-      const descriptor = obj.properties.get(key.value)!
+  getProp(obj: JSObject, curr: JSObject, key: JSString | JSNumber) {
+    if (curr.properties.has(key.value)) {
+      const descriptor = curr.properties.get(key.value)!
       if (descriptor.getter) {
         this.call(descriptor.getter, [], obj)
       } else {
@@ -537,9 +537,9 @@ export default class VirtualMachine {
       return
     }
 
-    const protoType = obj.get(new JSString('__proto__'))
+    const protoType = curr.get(new JSString('__proto__'))
     if (protoType.isObject()) {
-      this.getProp(protoType, key)
+      this.getProp(obj, protoType, key)
       return
     }
 
