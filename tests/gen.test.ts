@@ -350,10 +350,12 @@ test(`should work with prototype`, () => {
 test(`should work with getter`, () => {
   const code = `
   const a = {
+    hehe: 1,
     get foo () {
-      return 42
+      return 42 + this.hehe
     }
   }
+  a.hehe = 2
   a.foo
 `
   run(code)
