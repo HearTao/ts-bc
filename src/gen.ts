@@ -6,7 +6,7 @@ import createVHost from 'ts-ez-host'
 import { assertNever } from './utils'
 
 interface LexerContext {
-  locals?: ts.SymbolTable
+  func: ts.FunctionLikeDeclaration
   upValue: Set<string>
 }
 
@@ -411,13 +411,8 @@ export function gen(code: string): [(OpCode | OpValue)[], VObject[]] {
     updateLabel(label1)
     func.parameters.forEach(visitor)
 
-    if (!ts.isArrowFunction(func)) {
-      pushConst(new JSString('arguments'))
-      op.push(OpCode.Def)
-    }
-
     lexerContext.push({
-      locals: func.locals,
+      func,
       upValue: new Set()
     })
 
@@ -437,9 +432,14 @@ export function gen(code: string): [(OpCode | OpValue)[], VObject[]] {
 
     op.push(OpCode.Push)
     op.push(label1)
+    pushConst(new JSNumber(func.parameters.length))
 
     if (!ts.isArrowFunction(func)) {
-      pushConst(new JSString((func.name as ts.Identifier).text))
+      if (func.name) {
+        visitPropertyName(func.name)
+      } else {
+        pushConst(JSString.Empty)
+      }
       op.push(OpCode.CreateFunction)
     } else {
       op.push(OpCode.CreateLambda)
@@ -466,8 +466,10 @@ export function gen(code: string): [(OpCode | OpValue)[], VObject[]] {
 
     if (lexerContext.length) {
       const context = lexerContext[lexerContext.length - 1]
-      if (!context.locals!.has(id.text as ts.__String)) {
-        context.upValue.add(id.text)
+      if (ts.isArrowFunction(context.func) || id.text !== 'arguments') {
+        if (!context.func.locals!.has(id.text as ts.__String)) {
+          context.upValue.add(id.text)
+        }
       }
     }
   }

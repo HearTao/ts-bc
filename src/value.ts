@@ -226,6 +226,7 @@ export class JSBoolean extends JSPrimitive {
 export class JSFunction extends JSObject {
   constructor(
     public name: JSString = JSString.Empty,
+    public length: number = -1,
     public pos: number = -1,
     public upvalue: Map<string, VObject> = new Map()
   ) {
@@ -259,10 +260,11 @@ export class JSFunction extends JSObject {
 export class JSLambda extends JSFunction {
   constructor(
     public thisObject: VObject,
+    public length: number,
     public pos: number = -1,
     public upvalue: Map<string, VObject> = new Map()
   ) {
-    super(JSString.Empty, pos, upvalue)
+    super(JSString.Empty, length, pos, upvalue)
   }
 
   isLambda(): this is JSLambda {

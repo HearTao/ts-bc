@@ -459,6 +459,7 @@ export default class VirtualMachine implements Callable {
 
         case OpCode.CreateFunction: {
           const name = this.popStack()
+          const length = this.popStack()
           const pos = this.popStack()
           const upValueCount = this.popStack()
           const upValues: string[] = []
@@ -470,6 +471,7 @@ export default class VirtualMachine implements Callable {
 
           const func = new JSFunction(
             name.asString(),
+            length.asNumber().value,
             pos.asNumber().value,
             upValue
           )
@@ -481,6 +483,7 @@ export default class VirtualMachine implements Callable {
         }
 
         case OpCode.CreateLambda: {
+          const length = this.popStack()
           const pos = this.popStack()
           const upValueCount = this.popStack()
           const upValues: string[] = []
@@ -492,6 +495,7 @@ export default class VirtualMachine implements Callable {
 
           const func = new JSLambda(
             this.frames[this.frames.length - 1].thisObject,
+            length.asNumber().value,
             pos.asNumber().value,
             upValue
           )
@@ -670,7 +674,9 @@ export default class VirtualMachine implements Callable {
 
     this.cur = callee.pos
     if (!callee.isLambda()) {
-      this.stack.push(new JSArray(args))
+      const argumentsObject = new JSArray(args)
+      argumentsObject.set(new JSString('callee'), callee)
+      this.define('arguments', argumentsObject, EnvironmentType.lexer)
     }
     args.forEach(x => this.stack.push(x))
     return

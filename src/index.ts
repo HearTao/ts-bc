@@ -6,11 +6,9 @@ export { gen } from './gen'
 
 const code = `
 function foo() {
-  return () => this.f
+  return arguments[0]
 }
-const o = { f: 1 }
-const c = foo.call(o)
-c()
+foo(42)
 `
 const [op, value] = gen(code)
 

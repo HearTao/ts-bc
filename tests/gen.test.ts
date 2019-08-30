@@ -485,6 +485,24 @@ test(`should work with lambda`, () => {
   run(code)
 })
 
+test(`should work with arguments`, () => {
+  const code = `
+    function foo() {
+      return arguments[0]
+    }
+    foo(42)
+  `
+  run(code)
+})
+
+// test(`should work with callee`, () => {
+//   const code = `
+//   const f = (function (p) { return p === 0 ? p : p + arguments.callee(p - 1) })
+//   f(3)
+//   `
+//   run(code)
+// })
+
 test(`should work with step exec`, () => {
   const code = '0 ? 2 : 0 ? 3 : 4'
   stepRun(code)
