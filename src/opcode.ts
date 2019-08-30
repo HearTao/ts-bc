@@ -49,6 +49,7 @@ export enum OpCode {
 
   CreateArray,
   CreateFunction,
+  CreateLambda,
   CreateObject,
 
   This,

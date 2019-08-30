@@ -247,8 +247,26 @@ export class JSFunction extends JSObject {
     return false
   }
 
+  isLambda(): this is JSLambda {
+    return false
+  }
+
   get type() {
     return ObjectType.Function
+  }
+}
+
+export class JSLambda extends JSFunction {
+  constructor(
+    public thisObject: VObject,
+    public pos: number = -1,
+    public upvalue: Map<string, VObject> = new Map()
+  ) {
+    super(JSString.Empty, pos, upvalue)
+  }
+
+  isLambda(): this is JSLambda {
+    return true
   }
 }
 

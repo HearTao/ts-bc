@@ -473,6 +473,18 @@ test(`should work with switch case statement`, () => {
   runUnorder(code)
 })
 
+test(`should work with lambda`, () => {
+  const code = `
+    function foo() {
+      return () => this.f
+    }
+    const o = { f: 1 }
+    const c = foo.call(o)
+    c()
+  `
+  run(code)
+})
+
 test(`should work with step exec`, () => {
   const code = '0 ? 2 : 0 ? 3 : 4'
   stepRun(code)

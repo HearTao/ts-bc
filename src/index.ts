@@ -5,23 +5,12 @@ export { default } from './vm'
 export { gen } from './gen'
 
 const code = `
-function foo (a) {
-  let r = 41
-  switch (a) {
-    case 0:
-      return 'zero'
-    case 1:
-    case 2:
-      return 'one or two'
-    case 3:
-      r += 1
-      break
-    default:
-      return 'default'
-  }
-  return r
+function foo() {
+  return () => this.f
 }
-[foo(0), foo(1), foo(2), foo(3), foo(4)]
+const o = { f: 1 }
+const c = foo.call(o)
+c()
 `
 const [op, value] = gen(code)
 

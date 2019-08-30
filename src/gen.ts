@@ -75,10 +75,9 @@ export function gen(code: string): [(OpCode | OpValue)[], VObject[]] {
         visitBlock(<ts.Block>node)
         break
       case ts.SyntaxKind.FunctionDeclaration:
-        visitFunctionDeclaration(<ts.FunctionDeclaration>node)
-        break
       case ts.SyntaxKind.FunctionExpression:
-        visitFunctionExpression(<ts.FunctionExpression>node)
+      case ts.SyntaxKind.ArrowFunction:
+        visitFunctionLikeDeclaration(<ts.FunctionLikeDeclaration>node)
         break
       case ts.SyntaxKind.CallExpression:
         visitCallExpression(<ts.CallExpression>node)
@@ -397,16 +396,9 @@ export function gen(code: string): [(OpCode | OpValue)[], VObject[]] {
     }
   }
 
-  function visitFunctionExpression(func: ts.FunctionExpression) {
-    return visitFunctionLikeDeclaration(func)
-  }
-
-  function visitFunctionDeclaration(func: ts.FunctionDeclaration) {
-    return visitFunctionLikeDeclaration(func)
-  }
-
   function visitFunctionLikeDeclaration(func: ts.FunctionLikeDeclaration) {
-    if (!func.body) {
+    const body = func.body
+    if (!body) {
       throw new Error('function must have body')
     }
 
@@ -419,21 +411,22 @@ export function gen(code: string): [(OpCode | OpValue)[], VObject[]] {
     updateLabel(label1)
     func.parameters.forEach(visitor)
 
-    pushConst(new JSString('arguments'))
-    op.push(OpCode.Def)
+    if (!ts.isArrowFunction(func)) {
+      pushConst(new JSString('arguments'))
+      op.push(OpCode.Def)
+    }
 
     lexerContext.push({
       locals: func.locals,
       upValue: new Set()
     })
 
-    if (ts.isBlock(func.body)) {
-      func.body.statements.forEach(visitor)
+    if (ts.isBlock(body)) {
+      body.statements.forEach(visitor)
+      op.push(OpCode.Undefined)
     } else {
-      visitor(func.body)
+      visitor(body)
     }
-
-    op.push(OpCode.Undefined)
     op.push(OpCode.Ret)
     updateLabel(label2)
 
@@ -444,8 +437,13 @@ export function gen(code: string): [(OpCode | OpValue)[], VObject[]] {
 
     op.push(OpCode.Push)
     op.push(label1)
-    pushConst(new JSString((func.name as ts.Identifier).text))
-    op.push(OpCode.CreateFunction)
+
+    if (!ts.isArrowFunction(func)) {
+      pushConst(new JSString((func.name as ts.Identifier).text))
+      op.push(OpCode.CreateFunction)
+    } else {
+      op.push(OpCode.CreateLambda)
+    }
   }
 
   function visitBlock(block: ts.Block) {

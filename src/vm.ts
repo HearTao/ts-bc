@@ -1,5 +1,5 @@
 import { OpCode, OpValue } from './opcode'
-import { assertOPValue, findRight } from './utils'
+import { assertOPValue } from './utils'
 import {
   VMDump,
   DoneResult,
@@ -24,7 +24,8 @@ import {
   JSFunction,
   JSString,
   JSObject,
-  JSForInOrOfIterator
+  JSForInOrOfIterator,
+  JSLambda
 } from './value'
 import { init } from './bom'
 
@@ -472,8 +473,28 @@ export default class VirtualMachine implements Callable {
             pos.asNumber().value,
             upValue
           )
-          func.set(new JSString('prototype'), new JSObject())
           this.define(name.asString().value, func, EnvironmentType.lexer)
+          this.stack.push(func)
+
+          upValues.forEach(name => upValue.set(name, this.lookup(name)))
+          break
+        }
+
+        case OpCode.CreateLambda: {
+          const pos = this.popStack()
+          const upValueCount = this.popStack()
+          const upValues: string[] = []
+          const upValue: Map<string, VObject> = new Map()
+
+          for (let i = 0; i < upValueCount.asNumber().value; ++i) {
+            upValues.push(this.popStack().asString().value)
+          }
+
+          const func = new JSLambda(
+            this.frames[this.frames.length - 1].thisObject,
+            pos.asNumber().value,
+            upValue
+          )
           this.stack.push(func)
 
           upValues.forEach(name => upValue.set(name, this.lookup(name)))
@@ -629,6 +650,9 @@ export default class VirtualMachine implements Callable {
       }
       return
     }
+    if (callee.isLambda()) {
+      thisObject = callee.thisObject
+    }
 
     const stackFrame: StackFrame = {
       thisObject,
@@ -645,7 +669,9 @@ export default class VirtualMachine implements Callable {
     this.environments.push(this.frames[this.frames.length - 1].environments)
 
     this.cur = callee.pos
-    this.stack.push(new JSArray(args))
+    if (!callee.isLambda()) {
+      this.stack.push(new JSArray(args))
+    }
     args.forEach(x => this.stack.push(x))
     return
   }
