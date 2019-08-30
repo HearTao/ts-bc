@@ -376,10 +376,11 @@ export function gen(code: string): [(OpCode | OpValue)[], VObject[]] {
   }
 
   function visitReturnStatement(ret: ts.ReturnStatement) {
-    if (!ret.expression) {
-      throw new Error('return must have expr')
+    if (ret.expression) {
+      visitor(ret.expression)
+    } else {
+      op.push(OpCode.Undefined)
     }
-    visitor(ret.expression)
     op.push(OpCode.Ret)
   }
 

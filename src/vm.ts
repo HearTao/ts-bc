@@ -402,7 +402,10 @@ export default class VirtualMachine implements Callable {
           this.cur = frame.ret
           this.stack = this.stack.slice(0, frame.entry)
           this.stack.push(ret)
-          this.environments.pop()
+          this.environments = this.environments.slice(
+            0,
+            this.environments.indexOf(frame.environments)
+          )
           break
         }
 
