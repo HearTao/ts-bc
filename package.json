@@ -2,8 +2,9 @@
   "name": "ts-bc",
   "version": "0.0.0",
   "description": "",
-  "main": "index.js",
-  "browser": "browser.js",
+  "main": "libs/index.js",
+  "types": "libs/index.d.ts",
+  "browser": "libs/browser.js",
   "scripts": {
     "start": "tsc -w",
     "build": "tsc & webpack",
@@ -20,6 +21,10 @@
   "bugs": {
     "url": "https://github.com/HearTao/ts-bc/issues"
   },
+  "files": [
+    "src",
+    "libs"
+  ],
   "homepage": "https://github.com/HearTao/ts-bc#readme",
   "dependencies": {
     "memfs": "^2.15.5",
@@ -37,9 +42,7 @@
     "ts-loader": "^6.0.4",
     "ts-node": "^8.3.0",
     "webpack": "^4.39.2",
-    "webpack-cli": "^3.3.7",
-    "ts-jest": "^24.0.2",
-    "ts-node": "^8.3.0"
+    "webpack-cli": "^3.3.7"
   },
   "jest": {
     "preset": "ts-jest",
