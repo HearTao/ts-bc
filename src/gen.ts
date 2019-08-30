@@ -68,6 +68,9 @@ export function gen(code: string): [(OpCode | OpValue)[], VObject[]] {
       case ts.SyntaxKind.ForOfStatement:
         visitForInOrOfStatement(<ts.ForInStatement>node)
         break
+      case ts.SyntaxKind.IfStatement:
+        visitIfStatement(<ts.IfStatement>node)
+        break
       case ts.SyntaxKind.Identifier:
         visitIdentifier(<ts.Identifier>node)
         break
@@ -134,11 +137,38 @@ export function gen(code: string): [(OpCode | OpValue)[], VObject[]] {
     op.push({ value: value.length - 1 })
   }
 
+  function visitIfStatement(stmt: ts.IfStatement) {
+    const label1 = createLabel()
+    const label2 = createLabel()
+
+    visitor(stmt.expression)
+
+    op.push(OpCode.JumpIfFalse)
+    op.push(label2)
+
+    op.push(OpCode.EnterBlockScope)
+    visitor(stmt.thenStatement)
+    op.push(OpCode.ExitBlockScope)
+
+    op.push(OpCode.Jump)
+    op.push(label1)
+    updateLabel(label2)
+
+    if (stmt.elseStatement) {
+      op.push(OpCode.EnterBlockScope)
+      visitor(stmt.elseStatement)
+      op.push(OpCode.ExitBlockScope)
+    }
+    updateLabel(label1)
+  }
+
   function visitLabeledStatement(stmt: ts.LabeledStatement) {
     const label1 = createLabel()
+
+    pushConst(new JSString(stmt.label.text))
+
     op.push(OpCode.EnterLabeledBlockScope)
     op.push(label1)
-    pushConst(new JSString(stmt.label.text))
 
     visitor(stmt.statement)
     updateLabel(label1)

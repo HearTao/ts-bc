@@ -473,6 +473,36 @@ test(`should work with switch case statement`, () => {
   runUnorder(code)
 })
 
+test(`should break loop`, () => {
+  const code = `
+  let a = 0;
+  for (let i = 0; i < 100; ++i) {
+    a += i;
+    if (i > 10) {
+      break
+    }
+  }
+  a
+  `
+  run(code)
+})
+
+test(`should break label`, () => {
+  const code = `
+  let a = 0;
+  main: for (let i = 0; i < 10; ++i) {
+    for (let j = 0; j < 10; ++j) {
+      ++a;
+      if (i > 5) {
+        break main
+      }
+    }
+  }
+  a
+  `
+  run(code)
+})
+
 test(`should work with lambda`, () => {
   const code = `
     function foo() {

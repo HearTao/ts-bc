@@ -12,7 +12,8 @@ import {
   Callable,
   BlockEnvironmentKind,
   IterableBlockEnviroment,
-  BlockEnvironment
+  BlockEnvironment,
+  LabeledBlockEnvironment
 } from './types'
 import {
   VObject,
@@ -351,6 +352,24 @@ export default class VirtualMachine implements Callable {
         }
 
         case OpCode.BreakLabel: {
+          let env: LabeledBlockEnvironment | undefined = undefined
+
+          while (
+            this.environments[this.environments.length - 1].type ===
+            EnvironmentType.block
+          ) {
+            const top = this.environments.pop() as BlockEnvironment
+            if (top.kind === BlockEnvironmentKind.labeled) {
+              env = top as LabeledBlockEnvironment
+              break
+            }
+          }
+
+          if (!env) {
+            throw new Error('cannot break non-labeled block')
+          }
+
+          this.cur = env.end
           break
         }
 
