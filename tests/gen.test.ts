@@ -436,6 +436,29 @@ test(`should work with for of statement`, () => {
   runUnorder(code)
 })
 
+test(`should work with switch case statement`, () => {
+  const code = `
+  function foo (a) {
+    let r = 41
+    switch (a) {
+      case 0:
+        return 'zero'
+      case 1:
+      case 2:
+        return 'one or two'
+      case 3:
+        r += 1
+        break
+      default:
+        return 'default'
+    }
+    return r
+  }
+  [foo(0), foo(1), foo(2), foo(3), foo(4)]
+`
+  runUnorder(code)
+})
+
 test(`should work with step exec`, () => {
   const code = '0 ? 2 : 0 ? 3 : 4'
   stepRun(code)

@@ -107,6 +107,11 @@ export function gen(code: string): [(OpCode | OpValue)[], VObject[]] {
       case ts.SyntaxKind.NewExpression:
         visitNewExpression(<ts.NewExpression>node)
         break
+      case ts.SyntaxKind.SwitchStatement:
+        visitSwitchStatement(<ts.SwitchStatement>node)
+        break
+      case ts.SyntaxKind.BreakStatement:
+        visitBreakStatement(<ts.BreakStatement>node)
       default:
         ts.forEachChild(node, visitor)
     }
@@ -124,6 +129,38 @@ export function gen(code: string): [(OpCode | OpValue)[], VObject[]] {
     value.push(v)
     op.push(OpCode.Const)
     op.push({ value: value.length - 1 })
+  }
+
+  function visitBreakStatement(stmt: ts.BreakStatement) {
+
+  }
+
+  function visitSwitchStatement(stmt: ts.SwitchStatement) {
+    const clauses = stmt.caseBlock.clauses.map(clause => [createLabel(), clause] as const)
+    const defaultClause = clauses.find(([_, clause]) => ts.isDefaultClause(clause))
+    visitor(stmt.expression)
+
+    clauses.forEach(([label, clause]) => {
+      if (!ts.isDefaultClause(clause)) {
+        op.push(OpCode.Dup)
+        visitor(clause.expression)
+        op.push(OpCode.StrictEQ)
+        op.push(OpCode.JumpIfTrue)
+        op.push(label)
+      }
+    })
+
+    if (defaultClause) {
+      op.push(OpCode.Jump)
+      op.push(defaultClause[0])
+    }
+
+    op.push(OpCode.EnterBlockScope)
+    clauses.forEach(([label, clause]) => {
+      updateLabel(label)
+      clause.statements.forEach(visitor)
+    })
+    op.push(OpCode.ExitBlockScope)
   }
 
   function visitForStatement(stmt: ts.ForStatement) {
