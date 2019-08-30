@@ -1,5 +1,5 @@
 import { OpCode, OpValue } from './opcode'
-import { assertOPValue } from './utils'
+import { assertOPValue, findRight } from './utils'
 import {
   VMDump,
   DoneResult,
@@ -9,7 +9,10 @@ import {
   StackFrame,
   JSPropertyDescriptor,
   ObjectMemberType,
-  Callable
+  Callable,
+  BlockEnvironmentKind,
+  IterableBlockEnviroment,
+  BlockEnvironment
 } from './types'
 import {
   VObject,
@@ -289,13 +292,64 @@ export default class VirtualMachine implements Callable {
         case OpCode.EnterBlockScope: {
           this.environments.push({
             type: EnvironmentType.block,
+            kind: BlockEnvironmentKind.normal,
             valueTable: new Map()
+          })
+          break
+        }
+
+        case OpCode.EnterLabeledBlockScope: {
+          const end = this.popCode()
+          const label = this.popStack()
+          this.environments.push({
+            type: EnvironmentType.block,
+            kind: BlockEnvironmentKind.labeled,
+            valueTable: new Map(),
+            label: label.asString().value,
+            end
+          })
+          break
+        }
+
+        case OpCode.EnterIterableBlockScope: {
+          const end = this.popCode()
+          this.environments.push({
+            type: EnvironmentType.block,
+            kind: BlockEnvironmentKind.iterable,
+            valueTable: new Map(),
+            end
           })
           break
         }
 
         case OpCode.ExitBlockScope: {
           this.environments.pop()
+          break
+        }
+
+        case OpCode.Break: {
+          let env: IterableBlockEnviroment | undefined = undefined
+
+          while (
+            this.environments[this.environments.length - 1].type ===
+            EnvironmentType.block
+          ) {
+            const top = this.environments.pop() as BlockEnvironment
+            if (top.kind === BlockEnvironmentKind.iterable) {
+              env = top as IterableBlockEnviroment
+              break
+            }
+          }
+
+          if (!env) {
+            throw new Error('cannot break non-iterable block')
+          }
+
+          this.cur = env.end
+          break
+        }
+
+        case OpCode.BreakLabel: {
           break
         }
 

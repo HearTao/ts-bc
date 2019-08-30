@@ -21,3 +21,16 @@ export function assertDef<T>(v: T | undefined | null): T {
   }
   return v
 }
+
+export function findRight<T, U extends T>(
+  items: T[],
+  cb: (v: T) => v is U
+): U | undefined {
+  for (let i = items.length - 1; i >= 0; --i) {
+    const item = items[i]
+    if (cb(item)) {
+      return item
+    }
+  }
+  return undefined
+}

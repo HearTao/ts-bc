@@ -5,15 +5,23 @@ export { default } from './vm'
 export { gen } from './gen'
 
 const code = `
-const o = {
-  a: 1,
-  b: 2
+function foo (a) {
+  let r = 41
+  switch (a) {
+    case 0:
+      return 'zero'
+    case 1:
+    case 2:
+      return 'one or two'
+    case 3:
+      r += 1
+      break
+    default:
+      return 'default'
+  }
+  return r
 }
-const result = {}
-for (let k in o) {
-  result[k] = 1
-}
-Object.keys(result)
+[foo(0), foo(1), foo(2), foo(3), foo(4)]
 `
 const [op, value] = gen(code)
 

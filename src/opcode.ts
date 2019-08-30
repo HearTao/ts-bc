@@ -30,7 +30,12 @@ export enum OpCode {
   JumpIfFalse,
 
   EnterBlockScope,
+  EnterLabeledBlockScope,
+  EnterIterableBlockScope,
   ExitBlockScope,
+
+  Break,
+  BreakLabel,
 
   Ret,
   Call,

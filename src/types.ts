@@ -38,10 +38,37 @@ export interface LexerEnvironment {
   upValue: Map<string, VObject>
 }
 
-export interface BlockEnvironment {
+export enum BlockEnvironmentKind {
+  normal,
+  labeled,
+  iterable
+}
+
+export interface BaseBlockEnvironment {
   type: EnvironmentType.block
+  kind: BlockEnvironmentKind
   valueTable: Map<string, VObject>
 }
+
+export interface NormalBlockEnvironment extends BaseBlockEnvironment {
+  kind: BlockEnvironmentKind.normal
+}
+
+export interface LabeledBlockEnvironment extends BaseBlockEnvironment {
+  kind: BlockEnvironmentKind.labeled
+  label: string
+  end: number
+}
+
+export interface IterableBlockEnviroment extends BaseBlockEnvironment {
+  kind: BlockEnvironmentKind.iterable
+  end: number
+}
+
+export type BlockEnvironment =
+  | BaseBlockEnvironment
+  | LabeledBlockEnvironment
+  | IterableBlockEnviroment
 
 export type Environment =
   | LexerEnvironment

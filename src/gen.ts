@@ -112,6 +112,10 @@ export function gen(code: string): [(OpCode | OpValue)[], VObject[]] {
         break
       case ts.SyntaxKind.BreakStatement:
         visitBreakStatement(<ts.BreakStatement>node)
+        break
+      case ts.SyntaxKind.LabeledStatement:
+        visitLabeledStatement(<ts.LabeledStatement>node)
+        break
       default:
         ts.forEachChild(node, visitor)
     }
@@ -131,14 +135,39 @@ export function gen(code: string): [(OpCode | OpValue)[], VObject[]] {
     op.push({ value: value.length - 1 })
   }
 
-  function visitBreakStatement(stmt: ts.BreakStatement) {
+  function visitLabeledStatement(stmt: ts.LabeledStatement) {
+    const label1 = createLabel()
+    op.push(OpCode.EnterLabeledBlockScope)
+    op.push(label1)
+    pushConst(new JSString(stmt.label.text))
 
+    visitor(stmt.statement)
+    updateLabel(label1)
+  }
+
+  function visitBreakStatement(stmt: ts.BreakStatement) {
+    if (stmt.label) {
+      pushConst(new JSString(stmt.label.text))
+      op.push(OpCode.BreakLabel)
+    } else {
+      op.push(OpCode.Break)
+    }
   }
 
   function visitSwitchStatement(stmt: ts.SwitchStatement) {
-    const clauses = stmt.caseBlock.clauses.map(clause => [createLabel(), clause] as const)
-    const defaultClause = clauses.find(([_, clause]) => ts.isDefaultClause(clause))
+    const label1 = createLabel()
+    const label2 = createLabel()
+
+    const clauses = stmt.caseBlock.clauses.map(
+      clause => [createLabel(), clause] as const
+    )
+    const defaultClause = clauses.find(([_, clause]) =>
+      ts.isDefaultClause(clause)
+    )
     visitor(stmt.expression)
+
+    op.push(OpCode.EnterIterableBlockScope)
+    op.push(label2)
 
     clauses.forEach(([label, clause]) => {
       if (!ts.isDefaultClause(clause)) {
@@ -155,19 +184,24 @@ export function gen(code: string): [(OpCode | OpValue)[], VObject[]] {
       op.push(defaultClause[0])
     }
 
-    op.push(OpCode.EnterBlockScope)
     clauses.forEach(([label, clause]) => {
       updateLabel(label)
       clause.statements.forEach(visitor)
     })
+
+    updateLabel(label1)
     op.push(OpCode.ExitBlockScope)
+    updateLabel(label2)
   }
 
   function visitForStatement(stmt: ts.ForStatement) {
     const label1 = createLabel()
     const label2 = createLabel()
+    const label3 = createLabel()
 
-    op.push(OpCode.EnterBlockScope)
+    op.push(OpCode.EnterIterableBlockScope)
+    op.push(label3)
+
     stmt.initializer && visitor(stmt.initializer)
 
     updateLabel(label1)
@@ -190,6 +224,7 @@ export function gen(code: string): [(OpCode | OpValue)[], VObject[]] {
 
     updateLabel(label2)
     op.push(OpCode.ExitBlockScope)
+    updateLabel(label3)
   }
 
   function visitForInitializer(initializer: ts.ForInitializer) {
@@ -214,6 +249,7 @@ export function gen(code: string): [(OpCode | OpValue)[], VObject[]] {
   function visitForInOrOfStatement(stmt: ts.ForInOrOfStatement) {
     const label1 = createLabel()
     const label2 = createLabel()
+    const label3 = createLabel()
 
     visitor(stmt.expression)
     if (ts.isForInStatement(stmt)) {
@@ -222,7 +258,8 @@ export function gen(code: string): [(OpCode | OpValue)[], VObject[]] {
       op.push(OpCode.ForOfStart)
     }
 
-    op.push(OpCode.EnterBlockScope)
+    op.push(OpCode.EnterIterableBlockScope)
+    op.push(label3)
 
     updateLabel(label1)
     op.push(OpCode.Dup)
@@ -243,8 +280,8 @@ export function gen(code: string): [(OpCode | OpValue)[], VObject[]] {
     op.push(OpCode.Jump)
     op.push(label1)
     updateLabel(label2)
-
     op.push(OpCode.ExitBlockScope)
+    updateLabel(label3)
   }
 
   function visitNewExpression(expr: ts.NewExpression) {
