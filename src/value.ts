@@ -9,7 +9,8 @@ export enum ObjectType {
   Function,
   Array,
   Undefined,
-  Null
+  Null,
+  ForInOrOfIterator
 }
 
 export abstract class VObject {
@@ -182,6 +183,8 @@ export class JSNumber extends JSPrimitive {
     super()
   }
 
+  static Zero = new JSNumber(0)
+
   get type() {
     return ObjectType.Number
   }
@@ -196,7 +199,7 @@ export class JSString extends JSPrimitive {
     super()
   }
 
-  static empty = new JSString('')
+  static Empty = new JSString('')
 
   get type() {
     return ObjectType.String
@@ -207,6 +210,9 @@ export class JSBoolean extends JSPrimitive {
   constructor(public value: boolean) {
     super()
   }
+
+  static False = new JSBoolean(false)
+  static True = new JSBoolean(true)
 
   get type() {
     return ObjectType.Boolean
@@ -219,7 +225,7 @@ export class JSBoolean extends JSPrimitive {
 
 export class JSFunction extends JSObject {
   constructor(
-    public name: JSString = JSString.empty,
+    public name: JSString = JSString.Empty,
     public pos: number = -1,
     public upvalue: Map<string, VObject> = new Map()
   ) {
@@ -306,5 +312,21 @@ export class JSArray extends JSObject {
 
   debugValue() {
     return this.items.map(x => x.debugValue())
+  }
+}
+
+export class JSForInOrOfIterator extends VObject {
+  curr: number = 0
+
+  constructor(public target: JSObject) {
+    super()
+  }
+
+  get type() {
+    return ObjectType.ForInOrOfIterator
+  }
+
+  debugValue(): any {
+    return this
   }
 }

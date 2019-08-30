@@ -7,7 +7,9 @@ export enum OpCode {
   Div,
 
   LT,
+  LTE,
   GT,
+  GTE,
   StrictEQ,
   StrictNEQ,
 
@@ -24,6 +26,7 @@ export enum OpCode {
   Set,
 
   Jump,
+  JumpIfTrue,
   JumpIfFalse,
 
   EnterBlockScope,
@@ -35,6 +38,9 @@ export enum OpCode {
 
   Null,
   Undefined,
+  False,
+  True,
+  Zero,
 
   CreateArray,
   CreateFunction,
@@ -44,7 +50,12 @@ export enum OpCode {
   New,
 
   PropAccess,
-  PropAssignment
+  PropAssignment,
+
+  ForInStart,
+  ForInNext,
+  ForOfStart,
+  ForOfNext
 }
 
 export interface OpValue {

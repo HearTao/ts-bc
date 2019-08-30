@@ -1,7 +1,7 @@
 import * as ts from 'typescript'
 import { OpCode, OpValue, Label } from './opcode'
 import { EnvironmentType, ObjectMemberType } from './types'
-import { JSString, VObject, JSNumber } from './value'
+import { JSString, VObject, JSNumber, JSBoolean } from './value'
 import createVHost from 'ts-ez-host'
 import { assertNever } from './utils'
 
@@ -61,6 +61,13 @@ export function gen(code: string): [(OpCode | OpValue)[], VObject[]] {
       case ts.SyntaxKind.WhileStatement:
         visitWhileStatement(<ts.WhileStatement>node)
         break
+      case ts.SyntaxKind.ForStatement:
+        visitForStatement(<ts.ForStatement>node)
+        break
+      case ts.SyntaxKind.ForInStatement:
+      case ts.SyntaxKind.ForOfStatement:
+        visitForInOrOfStatement(<ts.ForInStatement>node)
+        break
       case ts.SyntaxKind.Identifier:
         visitIdentifier(<ts.Identifier>node)
         break
@@ -100,6 +107,11 @@ export function gen(code: string): [(OpCode | OpValue)[], VObject[]] {
       case ts.SyntaxKind.NewExpression:
         visitNewExpression(<ts.NewExpression>node)
         break
+      case ts.SyntaxKind.SwitchStatement:
+        visitSwitchStatement(<ts.SwitchStatement>node)
+        break
+      case ts.SyntaxKind.BreakStatement:
+        visitBreakStatement(<ts.BreakStatement>node)
       default:
         ts.forEachChild(node, visitor)
     }
@@ -117,6 +129,122 @@ export function gen(code: string): [(OpCode | OpValue)[], VObject[]] {
     value.push(v)
     op.push(OpCode.Const)
     op.push({ value: value.length - 1 })
+  }
+
+  function visitBreakStatement(stmt: ts.BreakStatement) {
+
+  }
+
+  function visitSwitchStatement(stmt: ts.SwitchStatement) {
+    const clauses = stmt.caseBlock.clauses.map(clause => [createLabel(), clause] as const)
+    const defaultClause = clauses.find(([_, clause]) => ts.isDefaultClause(clause))
+    visitor(stmt.expression)
+
+    clauses.forEach(([label, clause]) => {
+      if (!ts.isDefaultClause(clause)) {
+        op.push(OpCode.Dup)
+        visitor(clause.expression)
+        op.push(OpCode.StrictEQ)
+        op.push(OpCode.JumpIfTrue)
+        op.push(label)
+      }
+    })
+
+    if (defaultClause) {
+      op.push(OpCode.Jump)
+      op.push(defaultClause[0])
+    }
+
+    op.push(OpCode.EnterBlockScope)
+    clauses.forEach(([label, clause]) => {
+      updateLabel(label)
+      clause.statements.forEach(visitor)
+    })
+    op.push(OpCode.ExitBlockScope)
+  }
+
+  function visitForStatement(stmt: ts.ForStatement) {
+    const label1 = createLabel()
+    const label2 = createLabel()
+
+    op.push(OpCode.EnterBlockScope)
+    stmt.initializer && visitor(stmt.initializer)
+
+    updateLabel(label1)
+    if (stmt.condition) {
+      visitor(stmt.condition)
+    } else {
+      pushConst(new JSBoolean(true))
+    }
+
+    op.push(OpCode.JumpIfFalse)
+    op.push(label2)
+
+    op.push(OpCode.EnterBlockScope)
+    visitor(stmt.statement)
+    op.push(OpCode.ExitBlockScope)
+
+    stmt.incrementor && visitor(stmt.incrementor)
+    op.push(OpCode.Jump)
+    op.push(label1)
+
+    updateLabel(label2)
+    op.push(OpCode.ExitBlockScope)
+  }
+
+  function visitForInitializer(initializer: ts.ForInitializer) {
+    switch (initializer.kind) {
+      case ts.SyntaxKind.VariableDeclarationList:
+        const declList = <ts.VariableDeclarationList>initializer
+        declList.declarations.forEach(decl => {
+          pushConst(new JSString((<ts.Identifier>decl.name).text))
+
+          switch (getVariableEnvirementType(declList)) {
+            case EnvironmentType.block:
+              op.push(OpCode.DefBlock)
+              break
+            default:
+              op.push(OpCode.Def)
+              break
+          }
+        })
+    }
+  }
+
+  function visitForInOrOfStatement(stmt: ts.ForInOrOfStatement) {
+    const label1 = createLabel()
+    const label2 = createLabel()
+
+    visitor(stmt.expression)
+    if (ts.isForInStatement(stmt)) {
+      op.push(OpCode.ForInStart)
+    } else {
+      op.push(OpCode.ForOfStart)
+    }
+
+    op.push(OpCode.EnterBlockScope)
+
+    updateLabel(label1)
+    op.push(OpCode.Dup)
+    if (ts.isForInStatement(stmt)) {
+      op.push(OpCode.ForInNext)
+    } else {
+      op.push(OpCode.ForOfNext)
+    }
+    op.push(OpCode.JumpIfTrue)
+    op.push(label2)
+
+    visitForInitializer(stmt.initializer)
+
+    op.push(OpCode.EnterBlockScope)
+    visitor(stmt.statement)
+    op.push(OpCode.ExitBlockScope)
+
+    op.push(OpCode.Jump)
+    op.push(label1)
+    updateLabel(label2)
+
+    op.push(OpCode.ExitBlockScope)
   }
 
   function visitNewExpression(expr: ts.NewExpression) {

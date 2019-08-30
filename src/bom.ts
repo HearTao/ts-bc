@@ -22,7 +22,7 @@ export function initPrototype(vm: Callable, valueTable: Map<string, VObject>) {
   JSObject.protoType = metaObjectProto
 
   const metaFunctionProto = new JSNativeFunction(
-    JSString.empty,
+    JSString.Empty,
     () => new JSFunction()
   )
   JSFunction.protoType = metaFunctionProto
@@ -34,13 +34,13 @@ export function initPrototype(vm: Callable, valueTable: Map<string, VObject>) {
   initMetaObjectProto(metaObjectProto)
   initMetaFunctionProto(vm, metaFunctionProto)
 
-  const funcCtor = new JSNativeFunction(JSString.empty, () => new JSObject())
+  const funcCtor = new JSNativeFunction(JSString.Empty, () => new JSObject())
   funcCtor.setDescriptor(
     new JSString('prototype'),
     new JSPropertyDescriptor(metaFunctionProto, false)
   )
 
-  const objectCtor = new JSNativeFunction(JSString.empty, () => new JSObject())
+  const objectCtor = new JSNativeFunction(JSString.Empty, () => new JSObject())
   objectCtor.setDescriptor(
     new JSString('prototype'),
     new JSPropertyDescriptor(metaObjectProto, false)
@@ -84,7 +84,7 @@ function initMetaFunctionProto(vm: Callable, metaFunctionProto: JSObject) {
     new JSNativeFunction(new JSString('bind'), function(self, ...args) {
       if (this.isObject() && this.isFunction()) {
         const callee = this
-        return new JSBirdgeFunction(JSString.empty, function() {
+        return new JSBirdgeFunction(JSString.Empty, function() {
           vm.call(callee, args, self)
         })
       }

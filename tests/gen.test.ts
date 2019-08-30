@@ -9,6 +9,18 @@ function run(code: string) {
   expect(vm.exec().value.debugValue()).toStrictEqual(eval(code))
 }
 
+function runUnorder(code: string) {
+  const [op, value] = gen(code)
+  const vm = new VirtualMachine(op, value)
+
+  expect(
+    vm
+      .exec()
+      .value.debugValue()
+      .sort()
+  ).toStrictEqual(eval(code).sort())
+}
+
 function stepRun(code: string) {
   const [op, value] = gen(code)
   const vm = new VirtualMachine(op, value)
@@ -277,16 +289,7 @@ test(`should work with Object.keys`, () => {
     };
     Object['keys'](a)
   `
-
-  const [op, value] = gen(code)
-  const vm = new VirtualMachine(op, value)
-
-  expect(
-    vm
-      .exec()
-      .value.debugValue()
-      .sort()
-  ).toStrictEqual(eval(code).sort())
+  runUnorder(code)
 })
 
 test(`should work with '__proto__' and 'prototype'`, () => {
@@ -294,15 +297,7 @@ test(`should work with '__proto__' and 'prototype'`, () => {
     [Object.__proto__ === Function.prototype, Function.prototype === Function.__proto__, Function.prototype.__proto__ === Object.prototype]
   `
 
-  const [op, value] = gen(code)
-  const vm = new VirtualMachine(op, value)
-
-  expect(
-    vm
-      .exec()
-      .value.debugValue()
-      .sort()
-  ).toStrictEqual(eval(code).sort())
+  runUnorder(code)
 })
 
 test(`should work with new Ctor`, () => {
@@ -413,8 +408,69 @@ test(`should work with bind`, () => {
   }
   const f1 = f.bind(a, 42)
   f1()
+  `
+  run(code)
+})
+
+test(`should work with for statement`, () => {
+  const code = `
+  let s = 0
+  for (let i = 0; i < 100; ++i) {
+    s += i
+  }
+  s
 `
   run(code)
+})
+
+test(`should work with for in statement`, () => {
+  const code = `
+  const o = {
+    a: 1,
+    b: 2
+  }
+  const result = {}
+  for (let k in o) {
+    result[k] = 1
+  }
+  Object.keys(result)
+`
+  runUnorder(code)
+})
+
+test(`should work with for of statement`, () => {
+  const code = `
+  const o = [1, 2, 3]
+  const result = {}
+  for (let k of o) {
+    result[k] = k
+  }
+  Object.keys(result)
+`
+  runUnorder(code)
+})
+
+test(`should work with switch case statement`, () => {
+  const code = `
+  function foo (a) {
+    let r = 41
+    switch (a) {
+      case 0:
+        return 'zero'
+      case 1:
+      case 2:
+        return 'one or two'
+      case 3:
+        r += 1
+        break
+      default:
+        return 'default'
+    }
+    return r
+  }
+  [foo(0), foo(1), foo(2), foo(3), foo(4)]
+`
+  runUnorder(code)
 })
 
 test(`should work with step exec`, () => {
