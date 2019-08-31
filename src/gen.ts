@@ -539,6 +539,17 @@ export function gen(code: string): [(OpCode | OpValue)[], VObject[]] {
 
   function visitBinaryExpression(binary: ts.BinaryExpression) {
     switch (binary.operatorToken.kind) {
+      case ts.SyntaxKind.MinusEqualsToken:
+      case ts.SyntaxKind.AsteriskAsteriskEqualsToken:
+      case ts.SyntaxKind.AsteriskEqualsToken:
+      case ts.SyntaxKind.SlashEqualsToken:
+      case ts.SyntaxKind.PercentEqualsToken:
+      case ts.SyntaxKind.AmpersandEqualsToken:
+      case ts.SyntaxKind.BarEqualsToken:
+      case ts.SyntaxKind.CaretEqualsToken:
+      case ts.SyntaxKind.LessThanLessThanEqualsToken:
+      case ts.SyntaxKind.GreaterThanGreaterThanGreaterThanEqualsToken:
+      case ts.SyntaxKind.GreaterThanGreaterThanEqualsToken:
       case ts.SyntaxKind.EqualsToken:
       case ts.SyntaxKind.PlusEqualsToken:
         visitAssignmentExpression(binary as ts.AssignmentExpression<
@@ -583,39 +594,66 @@ export function gen(code: string): [(OpCode | OpValue)[], VObject[]] {
   function visitAssignmentExpression(
     expr: ts.AssignmentExpression<ts.AssignmentOperatorToken>
   ) {
-    switch (expr.operatorToken.kind) {
-      case ts.SyntaxKind.EqualsToken: {
-        visitor(expr.right)
-        visitLeftHandSideExpression(expr.left)
-        if (
-          ts.isElementAccessExpression(expr.left) ||
-          ts.isPropertyAccessExpression(expr.left)
-        ) {
-          op.push(OpCode.PropAssignment)
-        } else {
-          op.push(OpCode.Set)
-        }
-        break
-      }
-      case ts.SyntaxKind.PlusEqualsToken:
-        {
-          visitor(expr.right)
-          visitor(expr.left)
-          op.push(OpCode.Add)
-          visitLeftHandSideExpression(expr.left)
-          if (
-            ts.isElementAccessExpression(expr.left) ||
-            ts.isPropertyAccessExpression(expr.left)
-          ) {
-            op.push(OpCode.PropAssignment)
-          } else {
-            op.push(OpCode.Set)
+    visitor(expr.right)
+
+    if (expr.operatorToken.kind !== ts.SyntaxKind.EqualsToken) {
+      visitor(expr.left)
+
+      switch (expr.operatorToken.kind) {
+        case ts.SyntaxKind.PlusEqualsToken:
+          {
+            op.push(OpCode.Add)
           }
+          break
+        case ts.SyntaxKind.MinusEqualsToken: {
+          op.push(OpCode.Sub)
+          break
         }
-        break
-      default:
-        throw new Error('not supported')
+        case ts.SyntaxKind.AsteriskAsteriskEqualsToken: {
+          op.push(OpCode.Pow)
+          break
+        }
+        case ts.SyntaxKind.AsteriskEqualsToken: {
+          op.push(OpCode.Mul)
+          break
+        }
+        case ts.SyntaxKind.SlashEqualsToken: {
+          op.push(OpCode.Div)
+          break
+        }
+        case ts.SyntaxKind.PercentEqualsToken: {
+          op.push(OpCode.Mod)
+          break
+        }
+        case ts.SyntaxKind.AmpersandEqualsToken: {
+          op.push(OpCode.BitwiseAnd)
+          break
+        }
+        case ts.SyntaxKind.BarEqualsToken: {
+          op.push(OpCode.BitwiseOr)
+          break
+        }
+        case ts.SyntaxKind.CaretEqualsToken: {
+          op.push(OpCode.BitwiseXor)
+          break
+        }
+        case ts.SyntaxKind.LessThanLessThanEqualsToken: {
+          op.push(OpCode.LeftArithmeticShift)
+          break
+        }
+        case ts.SyntaxKind.GreaterThanGreaterThanGreaterThanEqualsToken: {
+          op.push(OpCode.RightLogicalShift)
+          break
+        }
+        case ts.SyntaxKind.GreaterThanGreaterThanEqualsToken: {
+          op.push(OpCode.RightArithmeticShift)
+          break
+        }
+      }
     }
+
+    visitLeftHandSideExpression(expr.left)
+    op.push(OpCode.SetLeftValue)
   }
 
   function visitWhileStatement(stmt: ts.WhileStatement) {
@@ -633,69 +671,81 @@ export function gen(code: string): [(OpCode | OpValue)[], VObject[]] {
     updateLabel(label1)
   }
 
-  function visitPrefixUnaryExpression(prefix: ts.PrefixUnaryExpression) {
-    visitLeftHandSideExpression(<ts.LeftHandSideExpression>prefix.operand)
+  function visitPrefixUnaryUpdateExpression(prefix: ts.PrefixUnaryExpression) {
+    visitor(prefix.operand)
+    op.push(OpCode.One)
+    if (prefix.operator === ts.SyntaxKind.PlusPlusToken) {
+      op.push(OpCode.Add)
+    } else {
+      op.push(OpCode.Sub)
+    }
+    op.push(OpCode.Dup)
+    visitLeftHandSideExpression(prefix.operand)
+    op.push(OpCode.SetLeftValue)
+  }
 
+  function visitPrefixUnaryExpression(prefix: ts.PrefixUnaryExpression) {
     switch (prefix.operator) {
-      case ts.SyntaxKind.PlusPlusToken: {
-        op.push(OpCode.PrefixIncr)
-        break
-      }
-      case ts.SyntaxKind.MinusMinusToken: {
-        op.push(OpCode.PrefixDecr)
-        break
-      }
+      case ts.SyntaxKind.PlusPlusToken:
+      case ts.SyntaxKind.MinusMinusToken:
+        visitPrefixUnaryUpdateExpression(prefix)
+        return
+    }
+
+    visitor(prefix.operand)
+    switch (prefix.operator) {
       case ts.SyntaxKind.PlusToken: {
         op.push(OpCode.PrefixPlus)
         break
       }
       case ts.SyntaxKind.MinusToken: {
         op.push(OpCode.PrefixMinus)
-
         break
       }
       case ts.SyntaxKind.TildeToken: {
-        op.push(OpCode.PrefixTilde)
+        op.push(OpCode.BitwiseNot)
 
         break
       }
       case ts.SyntaxKind.ExclamationToken: {
-        op.push(OpCode.PrefixNot)
+        op.push(OpCode.LogicalNot)
         break
       }
     }
   }
 
   function visitPostfixUnaryExpression(postfix: ts.PostfixUnaryExpression) {
-    visitLeftHandSideExpression(<ts.LeftHandSideExpression>postfix.operand)
-
-    switch (postfix.operator) {
-      case ts.SyntaxKind.PlusPlusToken: {
-        op.push(OpCode.PostfixIncr)
-        break
-      }
-      case ts.SyntaxKind.MinusMinusToken: {
-        op.push(OpCode.PostfixDecr)
-        break
-      }
+    visitor(postfix.operand)
+    op.push(OpCode.Dup)
+    op.push(OpCode.One)
+    if (postfix.operator === ts.SyntaxKind.PlusPlusToken) {
+      op.push(OpCode.Add)
+    } else {
+      op.push(OpCode.Sub)
     }
+    visitLeftHandSideExpression(postfix.operand)
+    op.push(OpCode.SetLeftValue)
   }
 
-  function visitLeftHandSideExpression(lhs: ts.LeftHandSideExpression) {
+  function visitLeftHandSideExpression(lhs: ts.UnaryExpression) {
     switch (lhs.kind) {
       case ts.SyntaxKind.Identifier:
         pushConst(new JSString((<ts.Identifier>lhs).text))
+        op.push(OpCode.LoadLeftValue)
         break
       case ts.SyntaxKind.ElementAccessExpression:
         visitor((<ts.ElementAccessExpression>lhs).argumentExpression)
         visitor((<ts.ElementAccessExpression>lhs).expression)
+        op.push(OpCode.LoadLeftValue)
         break
       case ts.SyntaxKind.PropertyAccessExpression:
         pushConst(new JSString((<ts.PropertyAccessExpression>lhs).name.text))
         visitor((<ts.PropertyAccessExpression>lhs).expression)
+        op.push(OpCode.LoadLeftValue)
         break
       default:
-        throw new Error('unsupported')
+        visitor(lhs)
+        break
     }
   }
 

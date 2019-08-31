@@ -184,6 +184,7 @@ export class JSNumber extends JSPrimitive {
   }
 
   static Zero = new JSNumber(0)
+  static One = new JSNumber(1)
 
   get type() {
     return ObjectType.Number

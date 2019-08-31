@@ -1,5 +1,5 @@
 import { OpCode, OpValue } from './opcode'
-import { assertOPValue } from './utils'
+import { assertOPValue, assertDef, assertNever } from './utils'
 import {
   VMDump,
   DoneResult,
@@ -151,13 +151,32 @@ export default class VirtualMachine implements Callable {
         case OpCode.Sub:
         case OpCode.Mul:
         case OpCode.Div:
+        case OpCode.Pow:
+        case OpCode.Mod:
+
+        case OpCode.BitwiseAnd:
+        case OpCode.BitwiseOr:
+        case OpCode.BitwiseXor:
+        case OpCode.LogicalAnd:
+        case OpCode.LogicalOr:
+        case OpCode.RightArithmeticShift:
+        case OpCode.LeftArithmeticShift:
+        case OpCode.RightLogicalShift:
         case OpCode.LT:
         case OpCode.GT:
         case OpCode.LTE:
         case OpCode.GTE:
-        case OpCode.StrictEQ: 
+        case OpCode.StrictEQ:
         case OpCode.StrictNEQ:
           this.binaryOp(op)
+          break
+
+        case OpCode.PrefixPlus:
+        case OpCode.PrefixMinus:
+        case OpCode.BitwiseNot:
+
+        case OpCode.LogicalNot:
+          this.unaryOp(op)
           break
 
         case OpCode.Jump: {
@@ -545,6 +564,11 @@ export default class VirtualMachine implements Callable {
           break
         }
 
+        case OpCode.One: {
+          this.stack.push(JSNumber.One)
+          break
+        }
+
         case OpCode.Drop: {
           this.stack.pop()
           break
@@ -570,7 +594,8 @@ export default class VirtualMachine implements Callable {
           break
         }
         default:
-          throw new Error('unexpected op: ' + op)
+          assertNever(op)
+          break
       }
 
       if (step) {
@@ -586,7 +611,29 @@ export default class VirtualMachine implements Callable {
     }
   }
 
-  binaryOp (op: OpCode) {
+  unaryOp(op: OpCode) {
+    const operand = this.popStack()
+    switch (op) {
+      case OpCode.PrefixPlus: {
+        this.stack.push(new JSNumber(+operand.asNumber().value))
+        break
+      }
+      case OpCode.PrefixMinus: {
+        this.stack.push(new JSNumber(-operand.asNumber().value))
+        break
+      }
+      case OpCode.BitwiseNot: {
+        this.stack.push(new JSNumber(~operand.asNumber().value))
+        break
+      }
+      case OpCode.LogicalNot: {
+        this.stack.push(new JSBoolean(!operand.asBoolean().value))
+        break
+      }
+    }
+  }
+
+  binaryOp(op: OpCode) {
     const right = this.popStack()
     const left = this.popStack()
 
@@ -659,6 +706,55 @@ export default class VirtualMachine implements Callable {
         } else {
           this.stack.push(new JSBoolean(left !== right))
         }
+        break
+      }
+
+      case OpCode.Pow: {
+        this.stack.push(
+          new JSNumber(left.asNumber().value ** right.asNumber().value)
+        )
+        break
+      }
+      case OpCode.Mod: {
+        this.stack.push(
+          new JSNumber(left.asNumber().value % right.asNumber().value)
+        )
+        break
+      }
+      case OpCode.BitwiseAnd: {
+        this.stack.push(
+          new JSNumber(left.asNumber().value & right.asNumber().value)
+        )
+        break
+      }
+      case OpCode.BitwiseOr: {
+        this.stack.push(
+          new JSNumber(left.asNumber().value | right.asNumber().value)
+        )
+        break
+      }
+      case OpCode.BitwiseXor: {
+        this.stack.push(
+          new JSNumber(left.asNumber().value & right.asNumber().value)
+        )
+        break
+      }
+      case OpCode.RightArithmeticShift: {
+        this.stack.push(
+          new JSNumber(left.asNumber().value >> right.asNumber().value)
+        )
+        break
+      }
+      case OpCode.LeftArithmeticShift: {
+        this.stack.push(
+          new JSNumber(left.asNumber().value << right.asNumber().value)
+        )
+        break
+      }
+      case OpCode.RightLogicalShift: {
+        this.stack.push(
+          new JSNumber(left.asNumber().value >>> right.asNumber().value)
+        )
         break
       }
     }

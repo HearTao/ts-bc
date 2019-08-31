@@ -5,16 +5,26 @@ export enum OpCode {
   Sub,
   Mul,
   Div,
+  Pow,
+  Mod,
 
-  PrefixIncr,
-  PrefixDecr,
   PrefixPlus,
   PrefixMinus,
-  PrefixTilde,
-  PrefixNot,
 
-  PostfixIncr,
-  PostfixDecr,
+  BitwiseNot,
+  BitwiseAnd,
+  BitwiseOr,
+  BitwiseXor,
+  RightArithmeticShift,
+  LeftArithmeticShift,
+  RightLogicalShift,
+
+  LogicalNot,
+  LogicalAnd,
+  LogicalOr,
+
+  LoadLeftValue,
+  SetLeftValue,
 
   LT,
   LTE,
@@ -56,6 +66,7 @@ export enum OpCode {
   False,
   True,
   Zero,
+  One,
 
   CreateArray,
   CreateFunction,
