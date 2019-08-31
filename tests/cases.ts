@@ -1,16 +1,12 @@
 import VirtualMachine, { gen } from '../src'
 
 const code = `
-let a = 0;
-  main: for (let i = 0; i < 10; ++i) {
-    for (let j = 0; j < 10; ++j) {
-      ++a;
-      if (i > 5) {
-        break main
-      }
-    }
+const o = [1, 2, 3]
+  const result = {}
+  for (let k of o) {
+    result[k] = k
   }
-  a
+  Object.keys(result)
 `
 const [op, value] = gen(code)
 

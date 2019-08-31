@@ -62,6 +62,8 @@ typings/
 
 libs/
 
+dist/
+
 .vscode/
 
 typescript.js

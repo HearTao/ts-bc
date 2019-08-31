@@ -8,8 +8,9 @@
   "scripts": {
     "start": "tsc -w",
     "build": "tsc",
+    "build:cases": "tsc -p ./tsconfig.test.json",
     "build:browser": "webpack",
-    "test": "jest --testPathIgnorePatterns browser --testPathIgnorePatterns libs",
+    "test": "jest --testPathIgnorePatterns browser --testPathIgnorePatterns libs --testPathIgnorePatterns dist",
     "test:browser": "npm run build:browser && jest",
     "prettier": "prettier --config ./prettier.json --write ./types/**/* ./src/* ./src/**/* ./tests/**/*"
   },

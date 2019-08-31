@@ -1,10 +1,29 @@
 export enum OpCode {
-  Eof,
-  Const,
+  Const = 100,
   Add,
   Sub,
   Mul,
   Div,
+  Pow,
+  Mod,
+
+  PrefixPlus,
+  PrefixMinus,
+
+  BitwiseNot,
+  BitwiseAnd,
+  BitwiseOr,
+  BitwiseXor,
+  RightArithmeticShift,
+  LeftArithmeticShift,
+  RightLogicalShift,
+
+  LogicalNot,
+  LogicalAnd,
+  LogicalOr,
+
+  LoadLeftValue,
+  SetLeftValue,
 
   LT,
   LTE,
@@ -46,6 +65,7 @@ export enum OpCode {
   False,
   True,
   Zero,
+  One,
 
   CreateArray,
   CreateFunction,
@@ -56,7 +76,6 @@ export enum OpCode {
   New,
 
   PropAccess,
-  PropAssignment,
 
   ForInStart,
   ForInNext,

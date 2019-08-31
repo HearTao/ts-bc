@@ -1,0 +1,12 @@
+{
+    "compilerOptions": {
+        "target": "esnext",
+        "module": "commonjs",
+        "moduleResolution": "node",
+        "strict": true,
+        "alwaysStrict": true,
+        "outDir": "dist",
+        "declaration": true,
+        "sourceMap": true
+    },
+}
