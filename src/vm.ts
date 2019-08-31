@@ -38,13 +38,13 @@ export default class VirtualMachine implements Callable {
   constructor(
     private codes: (OpCode | OpValue)[] = [],
     private values: VObject[] = [],
-    private cur: number = 0
+    private cur: number = 0,
+    valueTable: Map<string, VObject> = new Map()
   ) {
-    this.initGlobal()
+    this.initGlobal(valueTable)
   }
 
-  private initGlobal() {
-    const valueTable = new Map<string, VObject>()
+  private initGlobal(valueTable: Map<string, VObject>) {
     this.environments.push({
       type: EnvironmentType.global,
       valueTable

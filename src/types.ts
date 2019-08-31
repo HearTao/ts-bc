@@ -1,3 +1,4 @@
+import * as ts from 'typescript'
 import { OpCode, OpValue } from './opcode'
 import { VObject, JSUndefined, JSFunction } from './value'
 
@@ -100,4 +101,9 @@ export enum ObjectMemberType {
 
 export interface Callable {
   call(callee: JSFunction, args: VObject[], thisObject: VObject): void
+}
+
+export interface LexerContext {
+  func: ts.FunctionLikeDeclaration
+  upValue: Set<string>
 }

@@ -1,14 +1,8 @@
 import * as ts from 'typescript'
 import { OpCode, OpValue, Label } from './opcode'
-import { EnvironmentType, ObjectMemberType } from './types'
+import { EnvironmentType, ObjectMemberType, LexerContext } from './types'
 import { JSString, VObject, JSNumber, JSBoolean } from './value'
 import createVHost from 'ts-ez-host'
-import { assertNever } from './utils'
-
-interface LexerContext {
-  func: ts.FunctionLikeDeclaration
-  upValue: Set<string>
-}
 
 export function gen(code: string): [(OpCode | OpValue)[], VObject[]] {
   const op: (OpCode | OpValue)[] = []

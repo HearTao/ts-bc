@@ -7,9 +7,10 @@
   "browser": "libs/browser.js",
   "scripts": {
     "start": "tsc -w",
-    "build": "tsc & webpack",
+    "build": "tsc",
+    "build:browser": "webpack",
     "test": "jest --testPathIgnorePatterns browser --testPathIgnorePatterns libs",
-    "test:browser": "webpack && jest",
+    "test:browser": "npm run build:browser && jest",
     "prettier": "prettier --config ./prettier.json --write ./types/**/* ./src/* ./src/**/* ./tests/**/*"
   },
   "repository": {
