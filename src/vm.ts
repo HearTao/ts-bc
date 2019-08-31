@@ -1,5 +1,5 @@
 import { OpCode, OpValue } from './opcode'
-import { assertOPValue, assertDef, assertNever } from './utils'
+import { assertOPValue, assertDef, assertNever, assertOPCode } from './utils'
 import {
   VMDump,
   DoneResult,
@@ -26,7 +26,10 @@ import {
   JSString,
   JSObject,
   JSForInOrOfIterator,
-  JSLambda
+  JSLambda,
+  JSLValue,
+  LValueType,
+  LValueInfo
 } from './value'
 import { init } from './bom'
 
@@ -141,7 +144,7 @@ export default class VirtualMachine implements Callable {
   exec(step?: false): DoneResult
   exec(step?: boolean): ExecResult {
     while (this.cur < this.codes.length) {
-      const op = this.codes[this.cur++]
+      const op = assertOPCode(this.codes[this.cur++])
 
       switch (op) {
         case OpCode.Const:
@@ -497,18 +500,6 @@ export default class VirtualMachine implements Callable {
           break
         }
 
-        case OpCode.PropAssignment: {
-          const obj = this.popStack()
-          const idx = this.popStack()
-          const value = this.popStack()
-          if (obj.isObject() && (idx.isNumber() || idx.isString())) {
-            obj.set(idx, value)
-          } else {
-            throw new Error('invalid object assignment')
-          }
-          break
-        }
-
         case OpCode.This: {
           this.stack.push(this.frames[this.frames.length - 1].thisObject)
           break
@@ -593,6 +584,47 @@ export default class VirtualMachine implements Callable {
           this.stack.push(a, b)
           break
         }
+
+        case OpCode.LoadLeftValue: {
+          const lvalue = this.popStack()
+          if (lvalue.isObject()) {
+            const name = this.popStack()
+            this.stack.push(
+              new JSLValue({
+                type: LValueType.propertyAccess,
+                obj: lvalue,
+                name
+              })
+            )
+          } else {
+            this.stack.push(
+              new JSLValue({
+                type: LValueType.identifier,
+                name: lvalue
+              })
+            )
+          }
+          break
+        }
+
+        case OpCode.SetLeftValue: {
+          const lvalue = this.popStack() as JSLValue
+          const value = this.popStack()
+          if (lvalue.info.type === LValueType.identifier) {
+            this.setValue(lvalue.info.name.asString().value, value)
+          } else {
+            if (
+              lvalue.info.obj.isObject() &&
+              (lvalue.info.name.isNumber() || lvalue.info.name.isString())
+            ) {
+              lvalue.info.obj.set(lvalue.info.name, value)
+            } else {
+              throw new Error('invalid lhs assignment')
+            }
+          }
+          break
+        }
+
         default:
           assertNever(op)
           break

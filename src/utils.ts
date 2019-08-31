@@ -7,6 +7,13 @@ export function assertOPValue(v: OpCode | OpValue): number {
   return v.value
 }
 
+export function assertOPCode(v: OpCode | OpValue): OpCode {
+  if (typeof v !== 'number') {
+    throw new Error(`${v} is not value`)
+  }
+  return v
+}
+
 export function assertNever(v: never): never {
   return undefined!
 }

@@ -1,6 +1,5 @@
 export enum OpCode {
-  Eof,
-  Const,
+  Const = 100,
   Add,
   Sub,
   Mul,
@@ -77,7 +76,6 @@ export enum OpCode {
   New,
 
   PropAccess,
-  PropAssignment,
 
   ForInStart,
   ForInNext,

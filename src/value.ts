@@ -1,5 +1,5 @@
 import { assertDef } from './utils'
-import { JSPropertyDescriptor } from './types'
+import { JSPropertyDescriptor, Environment } from './types'
 
 export enum ObjectType {
   Number,
@@ -10,7 +10,8 @@ export enum ObjectType {
   Array,
   Undefined,
   Null,
-  ForInOrOfIterator
+  ForInOrOfIterator,
+  LValue
 }
 
 export abstract class VObject {
@@ -345,6 +346,38 @@ export class JSForInOrOfIterator extends VObject {
 
   get type() {
     return ObjectType.ForInOrOfIterator
+  }
+
+  debugValue(): any {
+    return this
+  }
+}
+
+export enum LValueType {
+  identifier,
+  propertyAccess
+}
+
+export interface LValueInfoIdentifier {
+  type: LValueType.identifier
+  name: VObject
+}
+
+export interface LValueInfoPropertyAccess {
+  type: LValueType.propertyAccess
+  obj: JSObject
+  name: VObject
+}
+
+export type LValueInfo = LValueInfoIdentifier | LValueInfoPropertyAccess
+
+export class JSLValue extends VObject {
+  constructor(public info: LValueInfo) {
+    super()
+  }
+
+  get type() {
+    return ObjectType.LValue
   }
 
   debugValue(): any {
