@@ -6,6 +6,16 @@ export enum OpCode {
   Mul,
   Div,
 
+  PrefixIncr,
+  PrefixDecr,
+  PrefixPlus,
+  PrefixMinus,
+  PrefixTilde,
+  PrefixNot,
+
+  PostfixIncr,
+  PostfixDecr,
+
   LT,
   LTE,
   GT,

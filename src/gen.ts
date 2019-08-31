@@ -49,6 +49,9 @@ export function gen(code: string): [(OpCode | OpValue)[], VObject[]] {
       case ts.SyntaxKind.PrefixUnaryExpression:
         visitPrefixUnaryExpression(<ts.PrefixUnaryExpression>node)
         break
+      case ts.SyntaxKind.PostfixUnaryExpression:
+        visitPostfixUnaryExpression(<ts.PostfixUnaryExpression>node)
+        break
       case ts.SyntaxKind.VariableDeclarationList:
         visitVariableDeclarationList(<ts.VariableDeclarationList>node)
         break
@@ -631,19 +634,50 @@ export function gen(code: string): [(OpCode | OpValue)[], VObject[]] {
   }
 
   function visitPrefixUnaryExpression(prefix: ts.PrefixUnaryExpression) {
+    visitLeftHandSideExpression(<ts.LeftHandSideExpression>prefix.operand)
+
     switch (prefix.operator) {
       case ts.SyntaxKind.PlusPlusToken: {
-        visitor(prefix.operand)
-        op.push(OpCode.Push)
-        op.push({ value: 1 })
-        op.push(OpCode.Add)
-        visitLeftHandSideExpression(<ts.LeftHandSideExpression>prefix.operand)
-        op.push(OpCode.Set)
-        visitor(prefix.operand)
+        op.push(OpCode.PrefixIncr)
         break
       }
-      default:
-        throw new Error('not supported')
+      case ts.SyntaxKind.MinusMinusToken: {
+        op.push(OpCode.PrefixDecr)
+        break
+      }
+      case ts.SyntaxKind.PlusToken: {
+        op.push(OpCode.PrefixPlus)
+        break
+      }
+      case ts.SyntaxKind.MinusToken: {
+        op.push(OpCode.PrefixMinus)
+
+        break
+      }
+      case ts.SyntaxKind.TildeToken: {
+        op.push(OpCode.PrefixTilde)
+
+        break
+      }
+      case ts.SyntaxKind.ExclamationToken: {
+        op.push(OpCode.PrefixNot)
+        break
+      }
+    }
+  }
+
+  function visitPostfixUnaryExpression(postfix: ts.PostfixUnaryExpression) {
+    visitLeftHandSideExpression(<ts.LeftHandSideExpression>postfix.operand)
+
+    switch (postfix.operator) {
+      case ts.SyntaxKind.PlusPlusToken: {
+        op.push(OpCode.PostfixIncr)
+        break
+      }
+      case ts.SyntaxKind.MinusMinusToken: {
+        op.push(OpCode.PostfixDecr)
+        break
+      }
     }
   }
 

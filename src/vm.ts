@@ -147,96 +147,18 @@ export default class VirtualMachine implements Callable {
         case OpCode.Const:
           this.stack.push(this.values[this.popCode()])
           break
-        case OpCode.Add: {
-          const right = this.popStack()
-          const left = this.popStack()
-          this.stack.push(
-            new JSNumber(left.asNumber().value + right.asNumber().value)
-          )
+        case OpCode.Add:
+        case OpCode.Sub:
+        case OpCode.Mul:
+        case OpCode.Div:
+        case OpCode.LT:
+        case OpCode.GT:
+        case OpCode.LTE:
+        case OpCode.GTE:
+        case OpCode.StrictEQ: 
+        case OpCode.StrictNEQ:
+          this.binaryOp(op)
           break
-        }
-        case OpCode.Sub: {
-          const right = this.popStack()
-          const left = this.popStack()
-          this.stack.push(
-            new JSNumber(left.asNumber().value - right.asNumber().value)
-          )
-          break
-        }
-        case OpCode.Mul: {
-          const right = this.popStack()
-          const left = this.popStack()
-          this.stack.push(
-            new JSNumber(left.asNumber().value * right.asNumber().value)
-          )
-          break
-        }
-        case OpCode.Div: {
-          const right = this.popStack()
-          const left = this.popStack()
-          this.stack.push(
-            new JSNumber(left.asNumber().value / right.asNumber().value)
-          )
-          break
-        }
-
-        case OpCode.LT: {
-          const right = this.popStack()
-          const left = this.popStack()
-          this.stack.push(
-            new JSBoolean(left.asNumber().value < right.asNumber().value)
-          )
-          break
-        }
-
-        case OpCode.GT: {
-          const right = this.popStack()
-          const left = this.popStack()
-          this.stack.push(
-            new JSBoolean(left.asNumber().value > right.asNumber().value)
-          )
-          break
-        }
-
-        case OpCode.LTE: {
-          const right = this.popStack()
-          const left = this.popStack()
-          this.stack.push(
-            new JSBoolean(left.asNumber().value <= right.asNumber().value)
-          )
-          break
-        }
-
-        case OpCode.GTE: {
-          const right = this.popStack()
-          const left = this.popStack()
-          this.stack.push(
-            new JSBoolean(left.asNumber().value >= right.asNumber().value)
-          )
-          break
-        }
-
-        case OpCode.StrictEQ: {
-          const right = this.popStack()
-          const left = this.popStack()
-          if (left.isNumber() && right.isNumber()) {
-            this.stack.push(new JSBoolean(left.value === right.value))
-          } else {
-            this.stack.push(new JSBoolean(left === right))
-          }
-          break
-        }
-
-        case OpCode.StrictNEQ: {
-          const right = this.popStack()
-          const left = this.popStack()
-          if (left.isNumber() && right.isNumber()) {
-            this.stack.push(new JSBoolean(left.value !== right.value))
-          } else {
-            this.stack.push(new JSBoolean(left !== right))
-          }
-          break
-        }
 
         case OpCode.Jump: {
           this.cur = this.popCode()
@@ -661,6 +583,84 @@ export default class VirtualMachine implements Callable {
     return {
       finished: true,
       value: this.popStack()
+    }
+  }
+
+  binaryOp (op: OpCode) {
+    const right = this.popStack()
+    const left = this.popStack()
+
+    switch (op) {
+      case OpCode.Add: {
+        this.stack.push(
+          new JSNumber(left.asNumber().value + right.asNumber().value)
+        )
+        break
+      }
+      case OpCode.Sub: {
+        this.stack.push(
+          new JSNumber(left.asNumber().value - right.asNumber().value)
+        )
+        break
+      }
+      case OpCode.Mul: {
+        this.stack.push(
+          new JSNumber(left.asNumber().value * right.asNumber().value)
+        )
+        break
+      }
+      case OpCode.Div: {
+        this.stack.push(
+          new JSNumber(left.asNumber().value / right.asNumber().value)
+        )
+        break
+      }
+
+      case OpCode.LT: {
+        this.stack.push(
+          new JSBoolean(left.asNumber().value < right.asNumber().value)
+        )
+        break
+      }
+
+      case OpCode.GT: {
+        this.stack.push(
+          new JSBoolean(left.asNumber().value > right.asNumber().value)
+        )
+        break
+      }
+
+      case OpCode.LTE: {
+        this.stack.push(
+          new JSBoolean(left.asNumber().value <= right.asNumber().value)
+        )
+        break
+      }
+
+      case OpCode.GTE: {
+        this.stack.push(
+          new JSBoolean(left.asNumber().value >= right.asNumber().value)
+        )
+        break
+      }
+
+      case OpCode.StrictEQ: {
+        if (left.isNumber() && right.isNumber()) {
+          this.stack.push(new JSBoolean(left.value === right.value))
+        } else {
+          this.stack.push(new JSBoolean(left === right))
+        }
+        break
+      }
+
+      case OpCode.StrictNEQ: {
+        if (left.isNumber() && right.isNumber()) {
+          this.stack.push(new JSBoolean(left.value !== right.value))
+        } else {
+          this.stack.push(new JSBoolean(left !== right))
+        }
+        break
+      }
     }
   }
 
