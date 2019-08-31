@@ -525,6 +525,16 @@ test(`should work with arguments`, () => {
   run(code)
 })
 
+test(`should work with more lhs`, () => {
+  const code = `
+    function foo(a) {
+      return {f: a}
+    }
+    foo(42).f++
+  `
+  run(code)
+})
+
 // test(`should work with callee`, () => {
 //   const code = `
 //   const f = (function (p) { return p === 0 ? p : p + arguments.callee(p - 1) })
