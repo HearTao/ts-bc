@@ -522,8 +522,10 @@ export function gen(code: string): [(OpCode | OpValue)[], ConstantValue[]] {
       } else {
         pushConst('')
       }
+      pushConst(func.getText())
       op.push(OpCode.CreateFunction)
     } else {
+      pushConst(func.getText())
       op.push(OpCode.CreateLambda)
     }
   }

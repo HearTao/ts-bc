@@ -442,6 +442,7 @@ export default class VirtualMachine implements Callable {
         }
 
         case OpCode.CreateFunction: {
+          const code = this.popStack()
           const name = this.popStack()
           const length = this.popStack()
           const pos = this.popStack()
@@ -457,7 +458,8 @@ export default class VirtualMachine implements Callable {
             name.asString(),
             length.asNumber().value,
             pos.asNumber().value,
-            upValue
+            upValue,
+            code.asString().value
           )
           this.define(name.asString().value, func, EnvironmentType.lexer)
           this.stack.push(func)
@@ -467,6 +469,7 @@ export default class VirtualMachine implements Callable {
         }
 
         case OpCode.CreateLambda: {
+          const code = this.popStack()
           const length = this.popStack()
           const pos = this.popStack()
           const upValueCount = this.popStack()
@@ -481,7 +484,8 @@ export default class VirtualMachine implements Callable {
             this.frames[this.frames.length - 1].thisObject,
             length.asNumber().value,
             pos.asNumber().value,
-            upValue
+            upValue,
+            code.asString().value
           )
           this.stack.push(func)
 
