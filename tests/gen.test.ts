@@ -242,6 +242,7 @@ test(`should work with upvalue`, () => {
       var a = 0;
       function bar () {
         a += 1;
+        for (let i = 0; i < 10; ++i) {}
         return a;
       }
       return bar;

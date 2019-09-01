@@ -1,14 +1,7 @@
 import * as ts from 'typescript'
 import { OpCode, OpValue, Label } from './opcode'
 import { EnvironmentType, ObjectMemberType, LexerContext } from './types'
-import {
-  JSString,
-  VObject,
-  JSNumber,
-  JSBoolean,
-  ConstantValue,
-  ConstantValueType
-} from './value'
+import { ConstantValue, ConstantValueType } from './value'
 import createVHost from 'ts-ez-host'
 
 export function gen(code: string): [(OpCode | OpValue)[], ConstantValue[]] {
@@ -161,6 +154,16 @@ export function gen(code: string): [(OpCode | OpValue)[], ConstantValue[]] {
     op.push({ value: constants.length - 1 })
   }
 
+  function visitInBlockScope<T extends ts.Node>(stmt: T, cb: () => void) {
+    if (stmt.locals && lexerContext.length) {
+      lexerContext[lexerContext.length - 1].locals.push(stmt.locals)
+    }
+    cb()
+    if (stmt.locals && lexerContext.length) {
+      lexerContext[lexerContext.length - 1].locals.pop()
+    }
+  }
+
   function visitIfStatement(stmt: ts.IfStatement) {
     const label1 = createLabel()
     const label2 = createLabel()
@@ -171,7 +174,7 @@ export function gen(code: string): [(OpCode | OpValue)[], ConstantValue[]] {
     op.push(label2)
 
     op.push(OpCode.EnterBlockScope)
-    visitor(stmt.thenStatement)
+    visitInBlockScope(stmt.thenStatement, () => visitor(stmt.thenStatement))
     op.push(OpCode.ExitBlockScope)
 
     op.push(OpCode.Jump)
@@ -179,8 +182,9 @@ export function gen(code: string): [(OpCode | OpValue)[], ConstantValue[]] {
     updateLabel(label2)
 
     if (stmt.elseStatement) {
+      const elseStatement = stmt.elseStatement
       op.push(OpCode.EnterBlockScope)
-      visitor(stmt.elseStatement)
+      visitInBlockScope(elseStatement, () => visitor(elseStatement))
       op.push(OpCode.ExitBlockScope)
     }
     updateLabel(label1)
@@ -194,7 +198,8 @@ export function gen(code: string): [(OpCode | OpValue)[], ConstantValue[]] {
     op.push(OpCode.EnterLabeledBlockScope)
     op.push(label1)
 
-    visitor(stmt.statement)
+    visitInBlockScope(stmt.statement, () => visitor(stmt.statement))
+
     updateLabel(label1)
   }
 
@@ -222,24 +227,26 @@ export function gen(code: string): [(OpCode | OpValue)[], ConstantValue[]] {
     op.push(OpCode.EnterIterableBlockScope)
     op.push(label2)
 
-    clauses.forEach(([label, clause]) => {
-      if (!ts.isDefaultClause(clause)) {
-        op.push(OpCode.Dup)
-        visitor(clause.expression)
-        op.push(OpCode.StrictEQ)
-        op.push(OpCode.JumpIfTrue)
-        op.push(label)
+    visitInBlockScope(stmt, () => {
+      clauses.forEach(([label, clause]) => {
+        if (!ts.isDefaultClause(clause)) {
+          op.push(OpCode.Dup)
+          visitor(clause.expression)
+          op.push(OpCode.StrictEQ)
+          op.push(OpCode.JumpIfTrue)
+          op.push(label)
+        }
+      })
+
+      if (defaultClause) {
+        op.push(OpCode.Jump)
+        op.push(defaultClause[0])
       }
-    })
 
-    if (defaultClause) {
-      op.push(OpCode.Jump)
-      op.push(defaultClause[0])
-    }
-
-    clauses.forEach(([label, clause]) => {
-      updateLabel(label)
-      clause.statements.forEach(visitor)
+      clauses.forEach(([label, clause]) => {
+        updateLabel(label)
+        clause.statements.forEach(visitor)
+      })
     })
 
     updateLabel(label1)
@@ -255,25 +262,27 @@ export function gen(code: string): [(OpCode | OpValue)[], ConstantValue[]] {
     op.push(OpCode.EnterIterableBlockScope)
     op.push(label3)
 
-    stmt.initializer && visitor(stmt.initializer)
+    visitInBlockScope(stmt, () => {
+      stmt.initializer && visitor(stmt.initializer)
 
-    updateLabel(label1)
-    if (stmt.condition) {
-      visitor(stmt.condition)
-    } else {
-      pushConst(true)
-    }
+      updateLabel(label1)
+      if (stmt.condition) {
+        visitor(stmt.condition)
+      } else {
+        pushConst(true)
+      }
 
-    op.push(OpCode.JumpIfFalse)
-    op.push(label2)
+      op.push(OpCode.JumpIfFalse)
+      op.push(label2)
 
-    op.push(OpCode.EnterBlockScope)
-    visitor(stmt.statement)
-    op.push(OpCode.ExitBlockScope)
+      op.push(OpCode.EnterBlockScope)
+      visitInBlockScope(stmt.statement, () => visitor(stmt.statement))
+      op.push(OpCode.ExitBlockScope)
 
-    stmt.incrementor && visitor(stmt.incrementor)
-    op.push(OpCode.Jump)
-    op.push(label1)
+      stmt.incrementor && visitor(stmt.incrementor)
+      op.push(OpCode.Jump)
+      op.push(label1)
+    })
 
     updateLabel(label2)
     op.push(OpCode.ExitBlockScope)
@@ -314,24 +323,27 @@ export function gen(code: string): [(OpCode | OpValue)[], ConstantValue[]] {
     op.push(OpCode.EnterIterableBlockScope)
     op.push(label3)
 
-    updateLabel(label1)
-    op.push(OpCode.Dup)
-    if (ts.isForInStatement(stmt)) {
-      op.push(OpCode.ForInNext)
-    } else {
-      op.push(OpCode.ForOfNext)
-    }
-    op.push(OpCode.JumpIfTrue)
-    op.push(label2)
+    visitInBlockScope(stmt, () => {
+      updateLabel(label1)
+      op.push(OpCode.Dup)
+      if (ts.isForInStatement(stmt)) {
+        op.push(OpCode.ForInNext)
+      } else {
+        op.push(OpCode.ForOfNext)
+      }
+      op.push(OpCode.JumpIfTrue)
+      op.push(label2)
 
-    visitForInitializer(stmt.initializer)
+      visitForInitializer(stmt.initializer)
 
-    op.push(OpCode.EnterBlockScope)
-    visitor(stmt.statement)
-    op.push(OpCode.ExitBlockScope)
+      op.push(OpCode.EnterBlockScope)
+      visitInBlockScope(stmt.statement, () => visitor(stmt.statement))
+      op.push(OpCode.ExitBlockScope)
 
-    op.push(OpCode.Jump)
-    op.push(label1)
+      op.push(OpCode.Jump)
+      op.push(label1)
+    })
+
     updateLabel(label2)
     op.push(OpCode.ExitBlockScope)
     updateLabel(label3)
@@ -467,7 +479,8 @@ export function gen(code: string): [(OpCode | OpValue)[], ConstantValue[]] {
 
     lexerContext.push({
       func,
-      upValue: new Set()
+      upValue: new Set(),
+      locals: []
     })
 
     if (ts.isBlock(body)) {
@@ -502,7 +515,7 @@ export function gen(code: string): [(OpCode | OpValue)[], ConstantValue[]] {
 
   function visitBlock(block: ts.Block) {
     op.push(OpCode.EnterBlockScope)
-    block.statements.forEach(visitor)
+    visitInBlockScope(block, () => block.statements.forEach(visitor))
     op.push(OpCode.ExitBlockScope)
   }
 
@@ -521,7 +534,10 @@ export function gen(code: string): [(OpCode | OpValue)[], ConstantValue[]] {
     if (lexerContext.length) {
       const context = lexerContext[lexerContext.length - 1]
       if (ts.isArrowFunction(context.func) || id.text !== 'arguments') {
-        if (!context.func.locals!.has(id.text as ts.__String)) {
+        if (
+          !context.func.locals!.has(id.text as ts.__String) &&
+          !context.locals.some(locale => locale.has(id.text as ts.__String))
+        ) {
           context.upValue.add(id.text)
         }
       }

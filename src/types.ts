@@ -106,4 +106,5 @@ export interface Callable {
 export interface LexerContext {
   func: ts.FunctionLikeDeclaration
   upValue: Set<string>
+  locals: ts.SymbolTable[]
 }
