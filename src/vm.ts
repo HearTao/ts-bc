@@ -44,18 +44,23 @@ export default class VirtualMachine implements Callable {
     private codes: (OpCode | OpValue)[] = [],
     private constants: ConstantValue[] = [],
     private cur: number = 0,
-    valueTable: Map<string, VObject> = new Map()
+    init?: (valueTable: Map<string, VObject>) => void
   ) {
-    this.initGlobal(valueTable)
+    const valueTable = this.initGlobal()
+    if (init) {
+      init(valueTable)
+    }
   }
 
-  private initGlobal(valueTable: Map<string, VObject>) {
+  private initGlobal() {
+    const valueTable: Map<string, VObject> = new Map()
     this.environments.push({
       type: EnvironmentType.global,
       valueTable
     })
 
     init(this, valueTable)
+    return valueTable
   }
 
   private popStack() {
@@ -499,10 +504,10 @@ export default class VirtualMachine implements Callable {
                 case ObjectMemberType.getter:
                   if (initializer.isObject() && initializer.isFunction()) {
                     const descriptor =
-                      obj.getDescriptor(name) ||
+                      obj.getDescriptor(name.value) ||
                       new JSPropertyDescriptor(undefined, true, true)
                     descriptor.getter = initializer
-                    obj.setDescriptor(name, descriptor)
+                    obj.setDescriptor(name.value, descriptor)
                   } else {
                     throw new Error('invalid getter')
                   }
@@ -538,7 +543,7 @@ export default class VirtualMachine implements Callable {
 
           const self = new JSObject()
           self.setDescriptor(
-            new JSString('__proto__'),
+            '__proto__',
             new JSPropertyDescriptor(protoType, false)
           )
           this.stack.push(self)

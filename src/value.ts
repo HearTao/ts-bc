@@ -131,18 +131,18 @@ export class JSValue extends VObject {
     if (this.properties.has(key.value)) {
       const descriptor = this.properties.get(key.value)!
       descriptor.value = value
-      this.setDescriptor(key, descriptor)
+      this.setDescriptor(key.value, descriptor)
     } else {
-      this.setDescriptor(key, new JSPropertyDescriptor(value))
+      this.setDescriptor(key.value, new JSPropertyDescriptor(value))
     }
   }
 
-  getDescriptor(key: JSString | JSNumber): JSPropertyDescriptor | undefined {
-    return this.properties.get(key.value)
+  getDescriptor(key: string | number): JSPropertyDescriptor | undefined {
+    return this.properties.get(key)
   }
 
-  setDescriptor(key: JSString | JSNumber, descriptor: JSPropertyDescriptor) {
-    this.properties.set(key.value, descriptor)
+  setDescriptor(key: string | number, descriptor: JSPropertyDescriptor) {
+    this.properties.set(key, descriptor)
   }
 }
 
@@ -151,7 +151,7 @@ export class JSObject extends JSValue {
     super(properties)
 
     this.setDescriptor(
-      new JSString('__proto__'),
+      '__proto__',
       new JSPropertyDescriptor(JSObject.protoType || JSNull.instance, false)
     )
   }
@@ -221,6 +221,11 @@ export class JSNumber extends JSPrimitive {
 export class JSString extends JSPrimitive {
   constructor(public value: string) {
     super()
+
+    this.setDescriptor(
+      '__proto__',
+      new JSPropertyDescriptor(JSString.protoType, false)
+    )
   }
 
   static protoType: JSObject
@@ -259,11 +264,11 @@ export class JSFunction extends JSObject {
     super(new Map())
 
     this.setDescriptor(
-      new JSString('__proto__'),
+      '__proto__',
       new JSPropertyDescriptor(assertDef(JSFunction.protoType), false)
     )
     this.setDescriptor(
-      new JSString('prototype'),
+      'prototype',
       new JSPropertyDescriptor(new JSObject(), false)
     )
   }
@@ -341,7 +346,7 @@ export class JSArray extends JSObject {
     super(new Map(items.map((item, i) => [i, item])))
 
     this.setDescriptor(
-      new JSString('__proto__'),
+      '__proto__',
       new JSPropertyDescriptor(assertDef(JSArray.protoType), false)
     )
   }

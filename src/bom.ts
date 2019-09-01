@@ -27,7 +27,7 @@ export function initPrototype(vm: Callable, valueTable: Map<string, VObject>) {
   )
   JSFunction.protoType = metaFunctionProto
   metaFunctionProto.setDescriptor(
-    new JSString('__proto__'),
+    '__proto__',
     new JSPropertyDescriptor(metaObjectProto, false)
   )
 
@@ -36,13 +36,13 @@ export function initPrototype(vm: Callable, valueTable: Map<string, VObject>) {
 
   const funcCtor = new JSNativeFunction(JSString.Empty, () => new JSObject())
   funcCtor.setDescriptor(
-    new JSString('prototype'),
+    'prototype',
     new JSPropertyDescriptor(metaFunctionProto, false)
   )
 
   const objectCtor = new JSNativeFunction(JSString.Empty, () => new JSObject())
   objectCtor.setDescriptor(
-    new JSString('prototype'),
+    'prototype',
     new JSPropertyDescriptor(metaObjectProto, false)
   )
 
@@ -131,7 +131,7 @@ function initArrayConstructor(valueTable: Map<string, VObject>) {
   )
 
   araryProto.setDescriptor(
-    new JSString('length'),
+    'length',
     new JSPropertyDescriptor(
       undefined,
       false,
@@ -170,7 +170,7 @@ function initStringConstructor(valueTable: Map<string, VObject>) {
   )
 
   stringProto.setDescriptor(
-    new JSString('length'),
+    'length',
     new JSPropertyDescriptor(
       undefined,
       false,
