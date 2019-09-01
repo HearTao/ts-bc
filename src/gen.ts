@@ -115,6 +115,10 @@ export function gen(code: string): [(OpCode | OpValue)[], ConstantValue[]] {
       case ts.SyntaxKind.LabeledStatement:
         visitLabeledStatement(<ts.LabeledStatement>node)
         break
+      case ts.SyntaxKind.TrueKeyword:
+      case ts.SyntaxKind.FalseKeyword:
+        visitBooleanLiteral(<ts.BooleanLiteral>node)
+        break
       default:
         ts.forEachChild(node, visitor)
     }
@@ -161,6 +165,17 @@ export function gen(code: string): [(OpCode | OpValue)[], ConstantValue[]] {
     cb()
     if (stmt.locals && lexerContext.length) {
       lexerContext[lexerContext.length - 1].locals.pop()
+    }
+  }
+
+  function visitBooleanLiteral(lit: ts.BooleanLiteral) {
+    switch (lit.kind) {
+      case ts.SyntaxKind.TrueKeyword:
+        op.push(OpCode.True)
+        break
+      case ts.SyntaxKind.FalseKeyword:
+        op.push(OpCode.False)
+        break
     }
   }
 

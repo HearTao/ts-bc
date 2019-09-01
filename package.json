@@ -10,8 +10,10 @@
     "build": "tsc",
     "build:cases": "tsc -p ./tsconfig.test.json",
     "build:browser": "webpack",
+    "build:vm": "webpack --config ./webpack.vm.config.js",
     "test": "jest --testPathIgnorePatterns browser --testPathIgnorePatterns libs --testPathIgnorePatterns dist",
     "test:browser": "npm run build:browser && jest",
+    "test:cases": "npm run build:cases && node ./dist/tests/cases.js",
     "prettier": "prettier --config ./prettier.json --write ./types/**/* ./src/* ./src/**/* ./tests/**/*"
   },
   "repository": {

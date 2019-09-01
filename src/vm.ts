@@ -850,7 +850,29 @@ export default class VirtualMachine implements Callable {
     return
   }
 
+  getPropIndexAccess(obj: JSArray | JSString, key: JSNumber): boolean {
+    if (obj.isArray()) {
+      if (0 <= key.value && key.value < obj.items.length) {
+        this.stack.push(obj.items[key.value])
+        return true
+      }
+    }
+    if (obj.isString()) {
+      if (0 <= key.value && key.value < obj.value.length) {
+        this.stack.push(new JSString(obj.value[key.value]))
+        return true
+      }
+    }
+    return false
+  }
+
   getProp(obj: JSValue, curr: JSValue, key: JSString | JSNumber) {
+    if (key.isNumber() && (obj.isString() || obj.isArray())) {
+      if (this.getPropIndexAccess(obj, key)) {
+        return
+      }
+    }
+
     if (curr.properties.has(key.value)) {
       const descriptor = curr.properties.get(key.value)!
       this.getValueByDescriptor(obj, descriptor)
@@ -887,6 +909,16 @@ export default class VirtualMachine implements Callable {
   }
 
   forOfNext(iter: JSForInOrOfIterator) {
+    if (iter.target.isString()) {
+      const values = iter.target.value.split('')
+      if (iter.curr < values.length) {
+        this.stack.push(new JSString(values[iter.curr++]))
+        this.stack.push(JSBoolean.False)
+      } else {
+        this.stack.push(JSBoolean.True)
+      }
+      return
+    }
     const values = Array.from(iter.target.properties.entries())
       .filter(([_, value]) => !!value.enumerable)
       .map(([_, value]) => value)
