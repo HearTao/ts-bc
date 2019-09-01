@@ -544,6 +544,23 @@ test(`should work with string index access`, () => {
   run(code)
 })
 
+test(`should work with func toString`, () => {
+  const code = `
+    function a() {
+      return 42;
+    }
+    a.toString()
+  `
+  run(code)
+})
+
+test(`should work with native func toString`, () => {
+  const code = `
+    Object.keys.toString()
+  `
+  run(code)
+})
+
 // test(`should work with callee`, () => {
 //   const code = `
 //   const f = (function (p) { return p === 0 ? p : p + arguments.callee(p - 1) })

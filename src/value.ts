@@ -259,7 +259,8 @@ export class JSFunction extends JSObject {
     public name: JSString = JSString.Empty,
     public length: number = -1,
     public pos: number = -1,
-    public upvalue: Map<string, VObject> = new Map()
+    public upvalue: Map<string, VObject> = new Map(),
+    public text: string = ''
   ) {
     super(new Map())
 
@@ -293,7 +294,8 @@ export class JSLambda extends JSFunction {
     public thisObject: VObject,
     public length: number,
     public pos: number = -1,
-    public upvalue: Map<string, VObject> = new Map()
+    public upvalue: Map<string, VObject> = new Map(),
+    public text: string
   ) {
     super(JSString.Empty, length, pos, upvalue)
   }
@@ -306,9 +308,10 @@ export class JSLambda extends JSFunction {
 export class JSBirdgeFunction extends JSFunction {
   constructor(
     public name: JSString,
-    public func: (this: VObject, ...args: VObject[]) => void
+    public func: (this: VObject, ...args: VObject[]) => void,
+    public text: string = ''
   ) {
-    super(name)
+    super(name, undefined, undefined, undefined, text)
   }
 
   isBridge(): this is JSBirdgeFunction {

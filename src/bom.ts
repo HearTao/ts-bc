@@ -91,6 +91,21 @@ function initMetaFunctionProto(vm: Callable, metaFunctionProto: JSObject) {
       throw new Error('is not callable')
     })
   )
+  metaFunctionProto.set(
+    new JSString('toString'),
+    new JSNativeFunction(new JSString('toString'), function() {
+      if (this.isObject() && this.isFunction()) {
+        if (!this.isBridge() || !this.isNative()) {
+          return new JSString(this.text)
+        } else {
+          return new JSString(
+            `function ${this.name.asString().value}() { [native code] }`
+          )
+        }
+      }
+      throw new Error('is not callable')
+    })
+  )
 }
 
 function initObjectConstructor(objectCtor: JSNativeFunction) {
