@@ -242,6 +242,7 @@ test(`should work with upvalue`, () => {
       var a = 0;
       function bar () {
         a += 1;
+        for (let i = 0; i < 10; ++i) {}
         return a;
       }
       return bar;
@@ -542,6 +543,14 @@ test(`should work with more lhs`, () => {
 //   `
 //   run(code)
 // })
+
+test(`should work with split and join`, () => {
+  const code = `
+    const s = '1.2.3.4'
+    s.split('.').join('[.]')
+  `
+  run(code)
+})
 
 test(`should work with step exec`, () => {
   const code = '0 ? 2 : 0 ? 3 : 4'

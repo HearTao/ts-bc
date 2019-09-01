@@ -1,5 +1,5 @@
 import { OpCode, OpValue } from './opcode'
-import { assertOPValue, assertDef, assertNever, assertOPCode } from './utils'
+import { assertOPValue, assertNever, assertOPCode } from './utils'
 import {
   VMDump,
   DoneResult,
@@ -29,7 +29,9 @@ import {
   JSLambda,
   JSLValue,
   LValueType,
-  LValueInfo
+  ConstantValue,
+  ConstantValueType,
+  JSValue
 } from './value'
 import { init } from './bom'
 
@@ -40,20 +42,25 @@ export default class VirtualMachine implements Callable {
 
   constructor(
     private codes: (OpCode | OpValue)[] = [],
-    private values: VObject[] = [],
+    private constants: ConstantValue[] = [],
     private cur: number = 0,
-    valueTable: Map<string, VObject> = new Map()
+    init?: (valueTable: Map<string, VObject>) => void
   ) {
-    this.initGlobal(valueTable)
+    const valueTable = this.initGlobal()
+    if (init) {
+      init(valueTable)
+    }
   }
 
-  private initGlobal(valueTable: Map<string, VObject>) {
+  private initGlobal() {
+    const valueTable: Map<string, VObject> = new Map()
     this.environments.push({
       type: EnvironmentType.global,
       valueTable
     })
 
     init(this, valueTable)
+    return valueTable
   }
 
   private popStack() {
@@ -116,13 +123,24 @@ export default class VirtualMachine implements Callable {
     throw new Error('cannot find name ' + name)
   }
 
+  private constantToValue(constant: ConstantValue) {
+    switch (constant.type) {
+      case ConstantValueType.string:
+        return new JSString(constant.value)
+      case ConstantValueType.number:
+        return new JSNumber(constant.value)
+      case ConstantValueType.boolean:
+        return new JSBoolean(constant.value)
+    }
+  }
+
   dump(): VMDump {
     return {
       stack: this.stack,
       frames: this.frames,
       environments: this.environments,
       codes: this.codes,
-      values: this.values,
+      constants: this.constants,
       cur: this.cur
     }
   }
@@ -132,7 +150,7 @@ export default class VirtualMachine implements Callable {
     this.frames = dump.frames
     this.environments = dump.environments
     this.codes = dump.codes
-    this.values = dump.values
+    this.constants = dump.constants
     this.cur = dump.cur
   }
 
@@ -147,9 +165,12 @@ export default class VirtualMachine implements Callable {
       const op = assertOPCode(this.codes[this.cur++])
 
       switch (op) {
-        case OpCode.Const:
-          this.stack.push(this.values[this.popCode()])
+        case OpCode.Const: {
+          const constant = this.constants[this.popCode()]
+          this.stack.push(this.constantToValue(constant))
           break
+        }
+
         case OpCode.Add:
         case OpCode.Sub:
         case OpCode.Mul:
@@ -321,7 +342,7 @@ export default class VirtualMachine implements Callable {
           const idx = this.popStack()
           const obj = this.popStack()
 
-          if (obj.isObject() && (idx.isNumber() || idx.isString())) {
+          if (obj.isValue() && (idx.isNumber() || idx.isString())) {
             this.getProp(obj, obj, idx)
           } else {
             throw new Error('not supported index access')
@@ -330,7 +351,7 @@ export default class VirtualMachine implements Callable {
           const callee = this.popStack()
           const length = this.popStack()
 
-          if (!callee.isObject() || !callee.isFunction()) {
+          if (!callee.isValue() || !callee.isFunction()) {
             throw new Error('is not callable')
           }
 
@@ -347,7 +368,7 @@ export default class VirtualMachine implements Callable {
           const callee = this.popStack()
           const length = this.popStack()
 
-          if (!callee.isObject() || !callee.isFunction()) {
+          if (!callee.isValue() || !callee.isFunction()) {
             throw new Error('is not callable')
           }
 
@@ -376,7 +397,7 @@ export default class VirtualMachine implements Callable {
         case OpCode.PropAccess: {
           const idx = this.popStack()
           const obj = this.popStack()
-          if (obj.isObject() && (idx.isNumber() || idx.isString())) {
+          if (obj.isValue() && (idx.isNumber() || idx.isString())) {
             this.getProp(obj, obj, idx)
           } else {
             throw new Error('not supported index access')
@@ -387,7 +408,7 @@ export default class VirtualMachine implements Callable {
         case OpCode.ForOfStart:
         case OpCode.ForInStart: {
           const obj = this.popStack()
-          if (!obj.isObject()) {
+          if (!obj.isValue()) {
             throw new Error('not supported non-object')
           }
           this.stack.push(new JSForInOrOfIterator(obj))
@@ -483,10 +504,10 @@ export default class VirtualMachine implements Callable {
                 case ObjectMemberType.getter:
                   if (initializer.isObject() && initializer.isFunction()) {
                     const descriptor =
-                      obj.getDescriptor(name) ||
+                      obj.getDescriptor(name.value) ||
                       new JSPropertyDescriptor(undefined, true, true)
                     descriptor.getter = initializer
-                    obj.setDescriptor(name, descriptor)
+                    obj.setDescriptor(name.value, descriptor)
                   } else {
                     throw new Error('invalid getter')
                   }
@@ -522,7 +543,7 @@ export default class VirtualMachine implements Callable {
 
           const self = new JSObject()
           self.setDescriptor(
-            new JSString('__proto__'),
+            '__proto__',
             new JSPropertyDescriptor(protoType, false)
           )
           this.stack.push(self)
@@ -829,7 +850,7 @@ export default class VirtualMachine implements Callable {
     return
   }
 
-  getProp(obj: JSObject, curr: JSObject, key: JSString | JSNumber) {
+  getProp(obj: JSValue, curr: JSValue, key: JSString | JSNumber) {
     if (curr.properties.has(key.value)) {
       const descriptor = curr.properties.get(key.value)!
       this.getValueByDescriptor(obj, descriptor)
@@ -845,7 +866,7 @@ export default class VirtualMachine implements Callable {
     this.stack.push(JSUndefined.instance)
   }
 
-  getValueByDescriptor(obj: JSObject, descriptor: JSPropertyDescriptor) {
+  getValueByDescriptor(obj: JSValue, descriptor: JSPropertyDescriptor) {
     if (descriptor.getter) {
       this.call(descriptor.getter, [], obj)
     } else {

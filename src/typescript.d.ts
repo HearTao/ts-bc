@@ -1,31 +1,35 @@
 import * as ts from 'typescript'
 
 declare module 'typescript' {
-  export interface FunctionDeclaration {
+  export interface Node {
+    locals?: ts.SymbolTable
+  }
+
+  export interface FunctionDeclaration extends Node {
     locals: ts.SymbolTable
   }
 
-  export interface MethodDeclaration {
+  export interface MethodDeclaration extends Node {
     locals: ts.SymbolTable
   }
 
-  export interface GetAccessorDeclaration {
+  export interface GetAccessorDeclaration extends Node {
     locals: ts.SymbolTable
   }
 
-  export interface SetAccessorDeclaration {
+  export interface SetAccessorDeclaration extends Node {
     locals: ts.SymbolTable
   }
 
-  export interface ConstructorDeclaration {
+  export interface ConstructorDeclaration extends Node {
     locals: ts.SymbolTable
   }
 
-  export interface FunctionExpression {
+  export interface FunctionExpression extends Node {
     locals: ts.SymbolTable
   }
 
-  export interface ArrowFunction {
+  export interface ArrowFunction extends Node {
     locals: ts.SymbolTable
   }
 }

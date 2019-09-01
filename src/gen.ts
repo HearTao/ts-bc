@@ -1,12 +1,12 @@
 import * as ts from 'typescript'
 import { OpCode, OpValue, Label } from './opcode'
 import { EnvironmentType, ObjectMemberType, LexerContext } from './types'
-import { JSString, VObject, JSNumber, JSBoolean } from './value'
+import { ConstantValue, ConstantValueType } from './value'
 import createVHost from 'ts-ez-host'
 
-export function gen(code: string): [(OpCode | OpValue)[], VObject[]] {
+export function gen(code: string): [(OpCode | OpValue)[], ConstantValue[]] {
   const op: (OpCode | OpValue)[] = []
-  const value: VObject[] = []
+  const constants: ConstantValue[] = []
 
   const host = createVHost()
   const filename = 'mod.tsx'
@@ -27,7 +27,7 @@ export function gen(code: string): [(OpCode | OpValue)[], VObject[]] {
 
   ts.forEachChild(sourceFile!, visitor)
 
-  return [op, value]
+  return [op, constants]
 
   function visitor(node: ts.Node) {
     switch (node.kind) {
@@ -128,10 +128,40 @@ export function gen(code: string): [(OpCode | OpValue)[], VObject[]] {
     l.value = op.length
   }
 
-  function pushConst(v: VObject) {
-    value.push(v)
+  function pushConst(value: string | number | boolean) {
+    switch (typeof value) {
+      case 'string':
+        constants.push({
+          type: ConstantValueType.string,
+          value
+        })
+        break
+      case 'number':
+        constants.push({
+          type: ConstantValueType.number,
+          value
+        })
+        break
+      case 'boolean':
+        constants.push({
+          type: ConstantValueType.boolean,
+          value
+        })
+        break
+    }
+
     op.push(OpCode.Const)
-    op.push({ value: value.length - 1 })
+    op.push({ value: constants.length - 1 })
+  }
+
+  function visitInBlockScope<T extends ts.Node>(stmt: T, cb: () => void) {
+    if (stmt.locals && lexerContext.length) {
+      lexerContext[lexerContext.length - 1].locals.push(stmt.locals)
+    }
+    cb()
+    if (stmt.locals && lexerContext.length) {
+      lexerContext[lexerContext.length - 1].locals.pop()
+    }
   }
 
   function visitIfStatement(stmt: ts.IfStatement) {
@@ -144,7 +174,7 @@ export function gen(code: string): [(OpCode | OpValue)[], VObject[]] {
     op.push(label2)
 
     op.push(OpCode.EnterBlockScope)
-    visitor(stmt.thenStatement)
+    visitInBlockScope(stmt.thenStatement, () => visitor(stmt.thenStatement))
     op.push(OpCode.ExitBlockScope)
 
     op.push(OpCode.Jump)
@@ -152,8 +182,9 @@ export function gen(code: string): [(OpCode | OpValue)[], VObject[]] {
     updateLabel(label2)
 
     if (stmt.elseStatement) {
+      const elseStatement = stmt.elseStatement
       op.push(OpCode.EnterBlockScope)
-      visitor(stmt.elseStatement)
+      visitInBlockScope(elseStatement, () => visitor(elseStatement))
       op.push(OpCode.ExitBlockScope)
     }
     updateLabel(label1)
@@ -162,18 +193,19 @@ export function gen(code: string): [(OpCode | OpValue)[], VObject[]] {
   function visitLabeledStatement(stmt: ts.LabeledStatement) {
     const label1 = createLabel()
 
-    pushConst(new JSString(stmt.label.text))
+    pushConst(stmt.label.text)
 
     op.push(OpCode.EnterLabeledBlockScope)
     op.push(label1)
 
-    visitor(stmt.statement)
+    visitInBlockScope(stmt.statement, () => visitor(stmt.statement))
+
     updateLabel(label1)
   }
 
   function visitBreakStatement(stmt: ts.BreakStatement) {
     if (stmt.label) {
-      pushConst(new JSString(stmt.label.text))
+      pushConst(stmt.label.text)
       op.push(OpCode.BreakLabel)
     } else {
       op.push(OpCode.Break)
@@ -195,24 +227,26 @@ export function gen(code: string): [(OpCode | OpValue)[], VObject[]] {
     op.push(OpCode.EnterIterableBlockScope)
     op.push(label2)
 
-    clauses.forEach(([label, clause]) => {
-      if (!ts.isDefaultClause(clause)) {
-        op.push(OpCode.Dup)
-        visitor(clause.expression)
-        op.push(OpCode.StrictEQ)
-        op.push(OpCode.JumpIfTrue)
-        op.push(label)
+    visitInBlockScope(stmt, () => {
+      clauses.forEach(([label, clause]) => {
+        if (!ts.isDefaultClause(clause)) {
+          op.push(OpCode.Dup)
+          visitor(clause.expression)
+          op.push(OpCode.StrictEQ)
+          op.push(OpCode.JumpIfTrue)
+          op.push(label)
+        }
+      })
+
+      if (defaultClause) {
+        op.push(OpCode.Jump)
+        op.push(defaultClause[0])
       }
-    })
 
-    if (defaultClause) {
-      op.push(OpCode.Jump)
-      op.push(defaultClause[0])
-    }
-
-    clauses.forEach(([label, clause]) => {
-      updateLabel(label)
-      clause.statements.forEach(visitor)
+      clauses.forEach(([label, clause]) => {
+        updateLabel(label)
+        clause.statements.forEach(visitor)
+      })
     })
 
     updateLabel(label1)
@@ -228,25 +262,27 @@ export function gen(code: string): [(OpCode | OpValue)[], VObject[]] {
     op.push(OpCode.EnterIterableBlockScope)
     op.push(label3)
 
-    stmt.initializer && visitor(stmt.initializer)
+    visitInBlockScope(stmt, () => {
+      stmt.initializer && visitor(stmt.initializer)
 
-    updateLabel(label1)
-    if (stmt.condition) {
-      visitor(stmt.condition)
-    } else {
-      pushConst(new JSBoolean(true))
-    }
+      updateLabel(label1)
+      if (stmt.condition) {
+        visitor(stmt.condition)
+      } else {
+        pushConst(true)
+      }
 
-    op.push(OpCode.JumpIfFalse)
-    op.push(label2)
+      op.push(OpCode.JumpIfFalse)
+      op.push(label2)
 
-    op.push(OpCode.EnterBlockScope)
-    visitor(stmt.statement)
-    op.push(OpCode.ExitBlockScope)
+      op.push(OpCode.EnterBlockScope)
+      visitInBlockScope(stmt.statement, () => visitor(stmt.statement))
+      op.push(OpCode.ExitBlockScope)
 
-    stmt.incrementor && visitor(stmt.incrementor)
-    op.push(OpCode.Jump)
-    op.push(label1)
+      stmt.incrementor && visitor(stmt.incrementor)
+      op.push(OpCode.Jump)
+      op.push(label1)
+    })
 
     updateLabel(label2)
     op.push(OpCode.ExitBlockScope)
@@ -258,7 +294,7 @@ export function gen(code: string): [(OpCode | OpValue)[], VObject[]] {
       case ts.SyntaxKind.VariableDeclarationList:
         const declList = <ts.VariableDeclarationList>initializer
         declList.declarations.forEach(decl => {
-          pushConst(new JSString((<ts.Identifier>decl.name).text))
+          pushConst((<ts.Identifier>decl.name).text)
 
           switch (getVariableEnvirementType(declList)) {
             case EnvironmentType.block:
@@ -287,24 +323,27 @@ export function gen(code: string): [(OpCode | OpValue)[], VObject[]] {
     op.push(OpCode.EnterIterableBlockScope)
     op.push(label3)
 
-    updateLabel(label1)
-    op.push(OpCode.Dup)
-    if (ts.isForInStatement(stmt)) {
-      op.push(OpCode.ForInNext)
-    } else {
-      op.push(OpCode.ForOfNext)
-    }
-    op.push(OpCode.JumpIfTrue)
-    op.push(label2)
+    visitInBlockScope(stmt, () => {
+      updateLabel(label1)
+      op.push(OpCode.Dup)
+      if (ts.isForInStatement(stmt)) {
+        op.push(OpCode.ForInNext)
+      } else {
+        op.push(OpCode.ForOfNext)
+      }
+      op.push(OpCode.JumpIfTrue)
+      op.push(label2)
 
-    visitForInitializer(stmt.initializer)
+      visitForInitializer(stmt.initializer)
 
-    op.push(OpCode.EnterBlockScope)
-    visitor(stmt.statement)
-    op.push(OpCode.ExitBlockScope)
+      op.push(OpCode.EnterBlockScope)
+      visitInBlockScope(stmt.statement, () => visitor(stmt.statement))
+      op.push(OpCode.ExitBlockScope)
 
-    op.push(OpCode.Jump)
-    op.push(label1)
+      op.push(OpCode.Jump)
+      op.push(label1)
+    })
+
     updateLabel(label2)
     op.push(OpCode.ExitBlockScope)
     updateLabel(label3)
@@ -338,7 +377,7 @@ export function gen(code: string): [(OpCode | OpValue)[], VObject[]] {
     propAccess: ts.PropertyAccessExpression
   ) {
     visitor(propAccess.expression)
-    pushConst(new JSString(propAccess.name.text))
+    pushConst(propAccess.name.text)
     op.push(OpCode.PropAccess)
   }
 
@@ -353,13 +392,13 @@ export function gen(code: string): [(OpCode | OpValue)[], VObject[]] {
       case ts.SyntaxKind.PropertyAssignment: {
         visitor(prop.initializer)
         visitPropertyName(prop.name)
-        pushConst(new JSNumber(ObjectMemberType.property))
+        pushConst(ObjectMemberType.property)
         break
       }
       case ts.SyntaxKind.GetAccessor: {
         visitFunctionLikeDeclaration(prop)
         visitPropertyName(prop.name)
-        pushConst(new JSNumber(ObjectMemberType.getter))
+        pushConst(ObjectMemberType.getter)
         break
       }
     }
@@ -368,7 +407,7 @@ export function gen(code: string): [(OpCode | OpValue)[], VObject[]] {
   function visitPropertyName(name: ts.PropertyName) {
     switch (name.kind) {
       case ts.SyntaxKind.Identifier:
-        pushConst(new JSString(name.text))
+        pushConst(name.text)
         break
       case ts.SyntaxKind.ComputedPropertyName:
       case ts.SyntaxKind.StringLiteral:
@@ -397,7 +436,7 @@ export function gen(code: string): [(OpCode | OpValue)[], VObject[]] {
       throw new Error('not supported')
     }
 
-    pushConst(new JSString(param.name.text))
+    pushConst(param.name.text)
     op.push(OpCode.Def)
   }
 
@@ -440,7 +479,8 @@ export function gen(code: string): [(OpCode | OpValue)[], VObject[]] {
 
     lexerContext.push({
       func,
-      upValue: new Set()
+      upValue: new Set(),
+      locals: []
     })
 
     if (ts.isBlock(body)) {
@@ -453,19 +493,19 @@ export function gen(code: string): [(OpCode | OpValue)[], VObject[]] {
     updateLabel(label2)
 
     const context = lexerContext.pop()!
-    context.upValue.forEach(u => pushConst(new JSString(u)))
+    context.upValue.forEach(u => pushConst(u))
     op.push(OpCode.Push)
     op.push({ value: context.upValue.size })
 
     op.push(OpCode.Push)
     op.push(label1)
-    pushConst(new JSNumber(func.parameters.length))
+    pushConst(func.parameters.length)
 
     if (!ts.isArrowFunction(func)) {
       if (func.name) {
         visitPropertyName(func.name)
       } else {
-        pushConst(JSString.Empty)
+        pushConst('')
       }
       op.push(OpCode.CreateFunction)
     } else {
@@ -475,26 +515,29 @@ export function gen(code: string): [(OpCode | OpValue)[], VObject[]] {
 
   function visitBlock(block: ts.Block) {
     op.push(OpCode.EnterBlockScope)
-    block.statements.forEach(visitor)
+    visitInBlockScope(block, () => block.statements.forEach(visitor))
     op.push(OpCode.ExitBlockScope)
   }
 
   function visitNumericLiteral(node: ts.NumericLiteral) {
-    pushConst(new JSNumber(+node.text))
+    pushConst(+node.text)
   }
 
   function visitStringLiteral(node: ts.StringLiteral) {
-    pushConst(new JSString(node.text))
+    pushConst(node.text)
   }
 
   function visitIdentifier(id: ts.Identifier) {
-    pushConst(new JSString(id.text))
+    pushConst(id.text)
     op.push(OpCode.Load)
 
     if (lexerContext.length) {
       const context = lexerContext[lexerContext.length - 1]
       if (ts.isArrowFunction(context.func) || id.text !== 'arguments') {
-        if (!context.func.locals!.has(id.text as ts.__String)) {
+        if (
+          !context.func.locals!.has(id.text as ts.__String) &&
+          !context.locals.some(locale => locale.has(id.text as ts.__String))
+        ) {
           context.upValue.add(id.text)
         }
       }
@@ -525,7 +568,7 @@ export function gen(code: string): [(OpCode | OpValue)[], VObject[]] {
     }
 
     visitor(variable.initializer)
-    pushConst(new JSString((variable.name as ts.Identifier).text))
+    pushConst((variable.name as ts.Identifier).text)
 
     switch (type) {
       case EnvironmentType.block:
@@ -730,7 +773,7 @@ export function gen(code: string): [(OpCode | OpValue)[], VObject[]] {
   function visitLeftHandSideExpression(lhs: ts.UnaryExpression) {
     switch (lhs.kind) {
       case ts.SyntaxKind.Identifier:
-        pushConst(new JSString((<ts.Identifier>lhs).text))
+        pushConst((<ts.Identifier>lhs).text)
         op.push(OpCode.LoadLeftValue)
         break
       case ts.SyntaxKind.ElementAccessExpression:
@@ -739,7 +782,7 @@ export function gen(code: string): [(OpCode | OpValue)[], VObject[]] {
         op.push(OpCode.LoadLeftValue)
         break
       case ts.SyntaxKind.PropertyAccessExpression:
-        pushConst(new JSString((<ts.PropertyAccessExpression>lhs).name.text))
+        pushConst((<ts.PropertyAccessExpression>lhs).name.text)
         visitor((<ts.PropertyAccessExpression>lhs).expression)
         op.push(OpCode.LoadLeftValue)
         break

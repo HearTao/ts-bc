@@ -1,10 +1,20 @@
-import VirtualMachine, { gen } from '../src'
+import VirtualMachine, { gen, JSString, VObject } from '../src'
 
 const code = `
-function foo(a) {
-  return {f: a}
+function foo() {
+  var a = 0;
+  function bar () {
+    a += 1;
+    for (let i = 0; i < 10; ++i) {
+      a = a + i - i
+    }
+    return a;
+  }
+  return bar;
 }
-(foo(42).f)++
+var b = foo();
+b();
+b()
 `
 const [op, value] = gen(code)
 

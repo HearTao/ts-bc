@@ -6,7 +6,6 @@ import {
   JSArray,
   JSFunction,
   JSNumber,
-  JSUndefined,
   JSBirdgeFunction
 } from './value'
 import { JSPropertyDescriptor, Callable } from './types'
@@ -15,6 +14,7 @@ export function init(vm: Callable, valueTable: Map<string, VObject>) {
   initPrototype(vm, valueTable)
 
   initArrayConstructor(valueTable)
+  initStringConstructor(valueTable)
 }
 
 export function initPrototype(vm: Callable, valueTable: Map<string, VObject>) {
@@ -27,7 +27,7 @@ export function initPrototype(vm: Callable, valueTable: Map<string, VObject>) {
   )
   JSFunction.protoType = metaFunctionProto
   metaFunctionProto.setDescriptor(
-    new JSString('__proto__'),
+    '__proto__',
     new JSPropertyDescriptor(metaObjectProto, false)
   )
 
@@ -36,13 +36,13 @@ export function initPrototype(vm: Callable, valueTable: Map<string, VObject>) {
 
   const funcCtor = new JSNativeFunction(JSString.Empty, () => new JSObject())
   funcCtor.setDescriptor(
-    new JSString('prototype'),
+    'prototype',
     new JSPropertyDescriptor(metaFunctionProto, false)
   )
 
   const objectCtor = new JSNativeFunction(JSString.Empty, () => new JSObject())
   objectCtor.setDescriptor(
-    new JSString('prototype'),
+    'prototype',
     new JSPropertyDescriptor(metaObjectProto, false)
   )
 
@@ -110,16 +110,28 @@ function initObjectConstructor(objectCtor: JSNativeFunction) {
 }
 
 function initArrayConstructor(valueTable: Map<string, VObject>) {
+  const araryProto = new JSObject()
+  JSArray.protoType = araryProto
+
   const arrayCtor = new JSNativeFunction(
     new JSString('Array'),
     () => new JSArray([])
   )
 
-  const araryProto = new JSObject()
-  JSArray.protoType = araryProto
+  araryProto.set(
+    new JSString('join'),
+    new JSNativeFunction(new JSString('join'), function(str) {
+      if (this.isObject() && this.isArray() && str.isString()) {
+        return new JSString(
+          this.items.map(x => x.asString().value).join(str.value)
+        )
+      }
+      return new JSString('')
+    })
+  )
 
   araryProto.setDescriptor(
-    new JSString('length'),
+    'length',
     new JSPropertyDescriptor(
       undefined,
       false,
@@ -134,4 +146,43 @@ function initArrayConstructor(valueTable: Map<string, VObject>) {
   )
 
   valueTable.set('Array', arrayCtor)
+}
+
+function initStringConstructor(valueTable: Map<string, VObject>) {
+  const stringProto = new JSObject()
+  JSString.protoType = stringProto
+
+  const stringCtor = new JSNativeFunction(
+    new JSString('String'),
+    () => new JSString('')
+  )
+
+  stringProto.set(
+    new JSString('split'),
+    new JSNativeFunction(new JSString('split'), function(str) {
+      if (this.isString() && str.isString()) {
+        return new JSArray(
+          this.value.split(str.value).map(x => new JSString(x))
+        )
+      }
+      return new JSArray([])
+    })
+  )
+
+  stringProto.setDescriptor(
+    'length',
+    new JSPropertyDescriptor(
+      undefined,
+      false,
+      true,
+      new JSNativeFunction(new JSString(''), function() {
+        if (this.isString()) {
+          return new JSNumber(this.value.length)
+        }
+        return new JSNumber(0)
+      })
+    )
+  )
+
+  valueTable.set('Array', stringCtor)
 }

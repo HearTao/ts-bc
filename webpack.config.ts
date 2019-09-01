@@ -1,6 +1,7 @@
 import * as path from 'path'
+import * as webpack from 'webpack'
 
-export default function WebpackConfig() {
+export default function WebpackConfig(): webpack.Configuration[] {
   return [
   {
     mode: 'production',

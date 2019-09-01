@@ -1,13 +1,13 @@
 import * as ts from 'typescript'
 import { OpCode, OpValue } from './opcode'
-import { VObject, JSUndefined, JSFunction } from './value'
+import { VObject, JSUndefined, JSFunction, ConstantValue } from './value'
 
 export interface VMDump {
   stack: VObject[]
   frames: StackFrame[]
   environments: Environment[]
   codes: (OpCode | OpValue)[]
-  values: VObject[]
+  constants: ConstantValue[]
   cur: number
 }
 
@@ -106,4 +106,5 @@ export interface Callable {
 export interface LexerContext {
   func: ts.FunctionLikeDeclaration
   upValue: Set<string>
+  locals: ts.SymbolTable[]
 }
