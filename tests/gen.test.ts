@@ -543,6 +543,14 @@ test(`should work with more lhs`, () => {
 //   run(code)
 // })
 
+test(`should work with split and join`, () => {
+  const code = `
+    const s = '1.2.3.4'
+    s.split('.').join('[.]')
+  `
+  run(code)
+})
+
 test(`should work with step exec`, () => {
   const code = '0 ? 2 : 0 ? 3 : 4'
   stepRun(code)

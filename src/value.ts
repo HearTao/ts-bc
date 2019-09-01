@@ -1,33 +1,49 @@
 import { assertDef } from './utils'
-import { JSPropertyDescriptor, Environment } from './types'
+import { JSPropertyDescriptor } from './types'
 
-export enum ObjectType {
-  Number,
-  String,
-  Boolean,
-  Object,
-  Function,
-  Array,
-  Undefined,
-  Null,
-  ForInOrOfIterator,
-  LValue
+export enum ConstantValueType {
+  string,
+  number,
+  boolean
 }
 
+export interface ConstantValueBase {
+  type: ConstantValueType
+}
+
+export interface ConstantValueString extends ConstantValueBase {
+  type: ConstantValueType.string
+  value: string
+}
+
+export interface ConstantValueNumber extends ConstantValueBase {
+  type: ConstantValueType.number
+  value: number
+}
+
+export interface COnstantValueBoolean extends ConstantValueBase {
+  type: ConstantValueType.boolean
+  value: boolean
+}
+
+export type ConstantValue =
+  | ConstantValueString
+  | ConstantValueNumber
+  | COnstantValueBoolean
+
 export abstract class VObject {
-  protected abstract get type(): ObjectType
   public abstract debugValue(): any
 
   isNumber(): this is JSNumber {
-    return this.type === ObjectType.Number
+    return false
   }
 
   isString(): this is JSString {
-    return this.type === ObjectType.String
+    return false
   }
 
   isBoolean(): this is JSBoolean {
-    return this.type === ObjectType.Boolean
+    return false
   }
 
   isNull(): this is JSNull {
@@ -40,6 +56,10 @@ export abstract class VObject {
 
   isPrimitive(): this is JSPrimitive {
     return this.isNumber() || this.isBoolean() || this.isString()
+  }
+
+  isValue(): this is JSValue {
+    return false
   }
 
   isObject(): this is JSObject {
@@ -65,51 +85,7 @@ export abstract class VObject {
   }
 }
 
-export abstract class JSPrimitive extends VObject {
-  protected abstract get value(): any
-
-  public debugValue() {
-    return this.value
-  }
-}
-
-export class JSUndefined extends JSPrimitive {
-  value: undefined = undefined
-
-  get type() {
-    return ObjectType.Undefined
-  }
-
-  isUndefined(): this is JSUndefined {
-    return true
-  }
-
-  asBoolean() {
-    return new JSBoolean(false)
-  }
-
-  static instance = new JSUndefined()
-}
-
-export class JSNull extends JSPrimitive {
-  value: null = null
-
-  get type() {
-    return ObjectType.Null
-  }
-
-  isNull(): this is JSNull {
-    return true
-  }
-
-  asBoolean() {
-    return new JSBoolean(false)
-  }
-
-  static instance = new JSNull()
-}
-
-export class JSObject extends VObject {
+export class JSValue extends VObject {
   private rc: number = 0
   public properties: Map<string | number, JSPropertyDescriptor> = new Map()
 
@@ -119,37 +95,28 @@ export class JSObject extends VObject {
     properties.forEach((value, key) => {
       this.properties.set(key, new JSPropertyDescriptor(value))
     })
-
-    this.setDescriptor(
-      new JSString('__proto__'),
-      new JSPropertyDescriptor(JSObject.protoType || JSNull.instance, false)
-    )
   }
 
   static protoType: JSObject | undefined
-
-  get type() {
-    return ObjectType.Object
-  }
 
   debugValue(): any {
     return this
   }
 
-  isObject(): this is JSObject {
+  isValue(): this is JSValue {
     return true
   }
 
+  isObject(): this is JSObject {
+    return false
+  }
+
   isArray(): this is JSArray {
-    return this.type === ObjectType.Array
+    return false
   }
 
   isFunction(): this is JSFunction {
-    return this.type === ObjectType.Function
-  }
-
-  asArray(): JSArray {
-    throw new Error('invalid cast')
+    return false
   }
 
   get(key: JSString | JSNumber): VObject | JSUndefined {
@@ -179,6 +146,61 @@ export class JSObject extends VObject {
   }
 }
 
+export class JSObject extends JSValue {
+  constructor(properties: Map<string | number, VObject> = new Map()) {
+    super(properties)
+
+    this.setDescriptor(
+      new JSString('__proto__'),
+      new JSPropertyDescriptor(JSObject.protoType || JSNull.instance, false)
+    )
+  }
+
+  isObject(): this is JSObject {
+    return true
+  }
+
+  asArray(): JSArray {
+    throw new Error('invalid cast')
+  }
+}
+
+export abstract class JSPrimitive extends JSValue {
+  protected abstract get value(): any
+
+  public debugValue() {
+    return this.value
+  }
+}
+
+export class JSUndefined extends JSPrimitive {
+  value: undefined = undefined
+
+  isUndefined(): this is JSUndefined {
+    return true
+  }
+
+  asBoolean() {
+    return new JSBoolean(false)
+  }
+
+  static instance = new JSUndefined()
+}
+
+export class JSNull extends JSPrimitive {
+  value: null = null
+
+  isNull(): this is JSNull {
+    return true
+  }
+
+  asBoolean() {
+    return new JSBoolean(false)
+  }
+
+  static instance = new JSNull()
+}
+
 export class JSNumber extends JSPrimitive {
   constructor(public value: number) {
     super()
@@ -187,8 +209,8 @@ export class JSNumber extends JSPrimitive {
   static Zero = new JSNumber(0)
   static One = new JSNumber(1)
 
-  get type() {
-    return ObjectType.Number
+  isNumber(): this is JSNumber {
+    return true
   }
 
   asBoolean() {
@@ -201,10 +223,12 @@ export class JSString extends JSPrimitive {
     super()
   }
 
+  static protoType: JSObject
+
   static Empty = new JSString('')
 
-  get type() {
-    return ObjectType.String
+  isString(): this is JSString {
+    return true
   }
 }
 
@@ -216,12 +240,12 @@ export class JSBoolean extends JSPrimitive {
   static False = new JSBoolean(false)
   static True = new JSBoolean(true)
 
-  get type() {
-    return ObjectType.Boolean
-  }
-
   asBoolean() {
     return this
+  }
+
+  isBoolean(): this is JSBoolean {
+    return true
   }
 }
 
@@ -246,16 +270,16 @@ export class JSFunction extends JSObject {
 
   static protoType: JSObject
 
+  isFunction(): this is JSFunction {
+    return true
+  }
+
   isBridge(): this is JSBirdgeFunction {
     return false
   }
 
   isLambda(): this is JSLambda {
     return false
-  }
-
-  get type() {
-    return ObjectType.Function
   }
 }
 
@@ -313,10 +337,6 @@ export class JSNativeFunction extends JSBirdgeFunction {
 }
 
 export class JSArray extends JSObject {
-  get type() {
-    return ObjectType.Array
-  }
-
   constructor(public items: VObject[]) {
     super(new Map(items.map((item, i) => [i, item])))
 
@@ -332,6 +352,10 @@ export class JSArray extends JSObject {
     return this
   }
 
+  isArray(): this is JSArray {
+    return true
+  }
+
   debugValue() {
     return this.items.map(x => x.debugValue())
   }
@@ -340,12 +364,8 @@ export class JSArray extends JSObject {
 export class JSForInOrOfIterator extends VObject {
   curr: number = 0
 
-  constructor(public target: JSObject) {
+  constructor(public target: JSValue) {
     super()
-  }
-
-  get type() {
-    return ObjectType.ForInOrOfIterator
   }
 
   debugValue(): any {
@@ -374,10 +394,6 @@ export type LValueInfo = LValueInfoIdentifier | LValueInfoPropertyAccess
 export class JSLValue extends VObject {
   constructor(public info: LValueInfo) {
     super()
-  }
-
-  get type() {
-    return ObjectType.LValue
   }
 
   debugValue(): any {

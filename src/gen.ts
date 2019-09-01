@@ -1,12 +1,19 @@
 import * as ts from 'typescript'
 import { OpCode, OpValue, Label } from './opcode'
 import { EnvironmentType, ObjectMemberType, LexerContext } from './types'
-import { JSString, VObject, JSNumber, JSBoolean } from './value'
+import {
+  JSString,
+  VObject,
+  JSNumber,
+  JSBoolean,
+  ConstantValue,
+  ConstantValueType
+} from './value'
 import createVHost from 'ts-ez-host'
 
-export function gen(code: string): [(OpCode | OpValue)[], VObject[]] {
+export function gen(code: string): [(OpCode | OpValue)[], ConstantValue[]] {
   const op: (OpCode | OpValue)[] = []
-  const value: VObject[] = []
+  const constants: ConstantValue[] = []
 
   const host = createVHost()
   const filename = 'mod.tsx'
@@ -27,7 +34,7 @@ export function gen(code: string): [(OpCode | OpValue)[], VObject[]] {
 
   ts.forEachChild(sourceFile!, visitor)
 
-  return [op, value]
+  return [op, constants]
 
   function visitor(node: ts.Node) {
     switch (node.kind) {
@@ -128,10 +135,30 @@ export function gen(code: string): [(OpCode | OpValue)[], VObject[]] {
     l.value = op.length
   }
 
-  function pushConst(v: VObject) {
-    value.push(v)
+  function pushConst(value: string | number | boolean) {
+    switch (typeof value) {
+      case 'string':
+        constants.push({
+          type: ConstantValueType.string,
+          value
+        })
+        break
+      case 'number':
+        constants.push({
+          type: ConstantValueType.number,
+          value
+        })
+        break
+      case 'boolean':
+        constants.push({
+          type: ConstantValueType.boolean,
+          value
+        })
+        break
+    }
+
     op.push(OpCode.Const)
-    op.push({ value: value.length - 1 })
+    op.push({ value: constants.length - 1 })
   }
 
   function visitIfStatement(stmt: ts.IfStatement) {
@@ -162,7 +189,7 @@ export function gen(code: string): [(OpCode | OpValue)[], VObject[]] {
   function visitLabeledStatement(stmt: ts.LabeledStatement) {
     const label1 = createLabel()
 
-    pushConst(new JSString(stmt.label.text))
+    pushConst(stmt.label.text)
 
     op.push(OpCode.EnterLabeledBlockScope)
     op.push(label1)
@@ -173,7 +200,7 @@ export function gen(code: string): [(OpCode | OpValue)[], VObject[]] {
 
   function visitBreakStatement(stmt: ts.BreakStatement) {
     if (stmt.label) {
-      pushConst(new JSString(stmt.label.text))
+      pushConst(stmt.label.text)
       op.push(OpCode.BreakLabel)
     } else {
       op.push(OpCode.Break)
@@ -234,7 +261,7 @@ export function gen(code: string): [(OpCode | OpValue)[], VObject[]] {
     if (stmt.condition) {
       visitor(stmt.condition)
     } else {
-      pushConst(new JSBoolean(true))
+      pushConst(true)
     }
 
     op.push(OpCode.JumpIfFalse)
@@ -258,7 +285,7 @@ export function gen(code: string): [(OpCode | OpValue)[], VObject[]] {
       case ts.SyntaxKind.VariableDeclarationList:
         const declList = <ts.VariableDeclarationList>initializer
         declList.declarations.forEach(decl => {
-          pushConst(new JSString((<ts.Identifier>decl.name).text))
+          pushConst((<ts.Identifier>decl.name).text)
 
           switch (getVariableEnvirementType(declList)) {
             case EnvironmentType.block:
@@ -338,7 +365,7 @@ export function gen(code: string): [(OpCode | OpValue)[], VObject[]] {
     propAccess: ts.PropertyAccessExpression
   ) {
     visitor(propAccess.expression)
-    pushConst(new JSString(propAccess.name.text))
+    pushConst(propAccess.name.text)
     op.push(OpCode.PropAccess)
   }
 
@@ -353,13 +380,13 @@ export function gen(code: string): [(OpCode | OpValue)[], VObject[]] {
       case ts.SyntaxKind.PropertyAssignment: {
         visitor(prop.initializer)
         visitPropertyName(prop.name)
-        pushConst(new JSNumber(ObjectMemberType.property))
+        pushConst(ObjectMemberType.property)
         break
       }
       case ts.SyntaxKind.GetAccessor: {
         visitFunctionLikeDeclaration(prop)
         visitPropertyName(prop.name)
-        pushConst(new JSNumber(ObjectMemberType.getter))
+        pushConst(ObjectMemberType.getter)
         break
       }
     }
@@ -368,7 +395,7 @@ export function gen(code: string): [(OpCode | OpValue)[], VObject[]] {
   function visitPropertyName(name: ts.PropertyName) {
     switch (name.kind) {
       case ts.SyntaxKind.Identifier:
-        pushConst(new JSString(name.text))
+        pushConst(name.text)
         break
       case ts.SyntaxKind.ComputedPropertyName:
       case ts.SyntaxKind.StringLiteral:
@@ -397,7 +424,7 @@ export function gen(code: string): [(OpCode | OpValue)[], VObject[]] {
       throw new Error('not supported')
     }
 
-    pushConst(new JSString(param.name.text))
+    pushConst(param.name.text)
     op.push(OpCode.Def)
   }
 
@@ -453,19 +480,19 @@ export function gen(code: string): [(OpCode | OpValue)[], VObject[]] {
     updateLabel(label2)
 
     const context = lexerContext.pop()!
-    context.upValue.forEach(u => pushConst(new JSString(u)))
+    context.upValue.forEach(u => pushConst(u))
     op.push(OpCode.Push)
     op.push({ value: context.upValue.size })
 
     op.push(OpCode.Push)
     op.push(label1)
-    pushConst(new JSNumber(func.parameters.length))
+    pushConst(func.parameters.length)
 
     if (!ts.isArrowFunction(func)) {
       if (func.name) {
         visitPropertyName(func.name)
       } else {
-        pushConst(JSString.Empty)
+        pushConst('')
       }
       op.push(OpCode.CreateFunction)
     } else {
@@ -480,15 +507,15 @@ export function gen(code: string): [(OpCode | OpValue)[], VObject[]] {
   }
 
   function visitNumericLiteral(node: ts.NumericLiteral) {
-    pushConst(new JSNumber(+node.text))
+    pushConst(+node.text)
   }
 
   function visitStringLiteral(node: ts.StringLiteral) {
-    pushConst(new JSString(node.text))
+    pushConst(node.text)
   }
 
   function visitIdentifier(id: ts.Identifier) {
-    pushConst(new JSString(id.text))
+    pushConst(id.text)
     op.push(OpCode.Load)
 
     if (lexerContext.length) {
@@ -525,7 +552,7 @@ export function gen(code: string): [(OpCode | OpValue)[], VObject[]] {
     }
 
     visitor(variable.initializer)
-    pushConst(new JSString((variable.name as ts.Identifier).text))
+    pushConst((variable.name as ts.Identifier).text)
 
     switch (type) {
       case EnvironmentType.block:
@@ -730,7 +757,7 @@ export function gen(code: string): [(OpCode | OpValue)[], VObject[]] {
   function visitLeftHandSideExpression(lhs: ts.UnaryExpression) {
     switch (lhs.kind) {
       case ts.SyntaxKind.Identifier:
-        pushConst(new JSString((<ts.Identifier>lhs).text))
+        pushConst((<ts.Identifier>lhs).text)
         op.push(OpCode.LoadLeftValue)
         break
       case ts.SyntaxKind.ElementAccessExpression:
@@ -739,7 +766,7 @@ export function gen(code: string): [(OpCode | OpValue)[], VObject[]] {
         op.push(OpCode.LoadLeftValue)
         break
       case ts.SyntaxKind.PropertyAccessExpression:
-        pushConst(new JSString((<ts.PropertyAccessExpression>lhs).name.text))
+        pushConst((<ts.PropertyAccessExpression>lhs).name.text)
         visitor((<ts.PropertyAccessExpression>lhs).expression)
         op.push(OpCode.LoadLeftValue)
         break

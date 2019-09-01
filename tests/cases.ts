@@ -1,13 +1,12 @@
 import VirtualMachine, { gen } from '../src'
 
 const code = `
-function foo(a) {
-  return {f: a}
-}
-(foo(42).f)++
+const s = '1.2.3.4'
+s.split('.').join('[.]')
 `
 const [op, value] = gen(code)
 
+console.log(op, value)
 const vm = new VirtualMachine(op, value)
 
 console.log(`code: ${code}`)
