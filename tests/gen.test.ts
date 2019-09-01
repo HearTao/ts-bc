@@ -536,6 +536,14 @@ test(`should work with more lhs`, () => {
   run(code)
 })
 
+test(`should work with string index access`, () => {
+  const code = `
+    const str = 'abcdefg'
+    str[str.length - 1]
+  `
+  run(code)
+})
+
 // test(`should work with callee`, () => {
 //   const code = `
 //   const f = (function (p) { return p === 0 ? p : p + arguments.callee(p - 1) })
