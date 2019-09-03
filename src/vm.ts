@@ -31,7 +31,9 @@ import {
   LValueType,
   ConstantValue,
   ConstantValueType,
-  JSValue
+  JSValue,
+  JSNativeFunction,
+  JSJitFunction
 } from './value'
 import { init } from './bom'
 
@@ -39,12 +41,15 @@ export default class VirtualMachine implements Callable {
   private stack: VObject[] = []
   private frames: StackFrame[] = []
   private environments: Environment[] = []
+  private hotspot: Map<JSFunction, number> = new Map()
+  private jitResult: Map<JSFunction, JSJitFunction> = new Map()
 
   constructor(
     private codes: (OpCode | OpValue)[] = [],
     private constants: ConstantValue[] = [],
     private cur: number = 0,
-    init?: (valueTable: Map<string, VObject>) => void
+    init?: (valueTable: Map<string, VObject>) => void,
+    private jit: boolean = false
   ) {
     const valueTable = this.initGlobal()
     if (init) {
@@ -506,7 +511,7 @@ export default class VirtualMachine implements Callable {
                   obj.set(name, initializer)
                   break
                 case ObjectMemberType.getter:
-                  if (initializer.isObject() && initializer.isFunction()) {
+                  if (initializer.isValue() && initializer.isFunction()) {
                     const descriptor =
                       obj.getDescriptor(name.value) ||
                       new JSPropertyDescriptor(undefined, true, true)
@@ -534,7 +539,7 @@ export default class VirtualMachine implements Callable {
           const callee = this.popStack()
           const length = this.popStack()
 
-          if (!callee.isObject() || !callee.isFunction()) {
+          if (!callee.isValue() || !callee.isFunction()) {
             throw new Error('is not callable')
           }
 
@@ -612,7 +617,7 @@ export default class VirtualMachine implements Callable {
 
         case OpCode.LoadLeftValue: {
           const lvalue = this.popStack()
-          if (lvalue.isObject()) {
+          if (lvalue.isValue()) {
             const name = this.popStack()
             this.stack.push(
               new JSLValue({
@@ -625,7 +630,7 @@ export default class VirtualMachine implements Callable {
             this.stack.push(
               new JSLValue({
                 type: LValueType.identifier,
-                name: lvalue
+                name: lvalue.asString()
               })
             )
           }
@@ -639,7 +644,7 @@ export default class VirtualMachine implements Callable {
             this.setValue(lvalue.info.name.asString().value, value)
           } else {
             if (
-              lvalue.info.obj.isObject() &&
+              lvalue.info.obj.isValue() &&
               (lvalue.info.name.isNumber() || lvalue.info.name.isString())
             ) {
               lvalue.info.obj.set(lvalue.info.name, value)
@@ -830,6 +835,23 @@ export default class VirtualMachine implements Callable {
       thisObject = callee.thisObject
     }
 
+    if (this.jit && callee.inline && args.every(x => x.isNumber())) {
+      if (this.jitResult.has(callee)) {
+        this.stack.push(
+          this.jitResult
+            .get(callee)!
+            .apply(JSUndefined.instance, (args as JSNumber[]).reverse())
+        )
+        return
+      }
+
+      const count = this.hotspot.get(callee) || 0
+      this.hotspot.set(callee, count + 1)
+      if (count >= 99) {
+        this.jitResult.set(callee, new JSJitFunction(callee.name, callee))
+      }
+    }
+
     const stackFrame: StackFrame = {
       thisObject,
       ret: this.cur,
@@ -884,7 +906,7 @@ export default class VirtualMachine implements Callable {
     }
 
     const protoType = curr.get(new JSString('__proto__'))
-    if (protoType.isObject()) {
+    if (protoType.isValue()) {
       this.getProp(obj, protoType, key)
       return
     }

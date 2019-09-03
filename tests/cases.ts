@@ -1,25 +1,32 @@
-import VirtualMachine, { gen, JSString, VObject } from '../src'
+import VirtualMachine, { gen } from '../src'
 
 const code = `
-function foo() {
-  var a = 0;
-  function bar () {
-    a += 1;
-    for (let i = 0; i < 10; ++i) {
-      a = a + i - i
-    }
-    return a;
-  }
-  return bar;
+function a() {
+  return 42;
 }
-var b = foo();
-b();
-b()
+a.toString()
 `
 const [op, value] = gen(code)
 
 const vm = new VirtualMachine(op, value)
+const vmJit = new VirtualMachine(op, value, 0, undefined, true)
+
+function runInContext(cb: () => void) {
+  const now = Date.now()
+  cb()
+  console.log('time:', Date.now() - now)
+}
 
 console.log(`code: ${code}`)
-console.log(`vm: ${vm.exec().value.debugValue()}`)
-console.log(`eval: ${eval(code)}`)
+
+runInContext(() => {
+  console.log(`vm: ${vm.exec().value.debugValue()}`)
+})
+
+runInContext(() => {
+  console.log(`vmJit: ${vmJit.exec().value.debugValue()}`)
+})
+
+runInContext(() => {
+  console.log(`native: ${eval(code)}`)
+})

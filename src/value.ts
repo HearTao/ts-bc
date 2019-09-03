@@ -55,7 +55,7 @@ export abstract class VObject {
   }
 
   isPrimitive(): this is JSPrimitive {
-    return this.isNumber() || this.isBoolean() || this.isString()
+    return false
   }
 
   isValue(): this is JSValue {
@@ -97,7 +97,7 @@ export class JSValue extends VObject {
     })
   }
 
-  static protoType: JSObject | undefined
+  static protoType: JSValue | undefined
 
   debugValue(): any {
     return this
@@ -168,6 +168,10 @@ export class JSObject extends JSValue {
 export abstract class JSPrimitive extends JSValue {
   protected abstract get value(): any
 
+  isPrimitive(): this is JSPrimitive {
+    return true
+  }
+
   public debugValue() {
     return this.value
   }
@@ -228,7 +232,7 @@ export class JSString extends JSPrimitive {
     )
   }
 
-  static protoType: JSObject
+  static protoType: JSValue
 
   static Empty = new JSString('')
 
@@ -254,7 +258,9 @@ export class JSBoolean extends JSPrimitive {
   }
 }
 
-export class JSFunction extends JSObject {
+export class JSFunction extends JSValue {
+  public inline: boolean
+
   constructor(
     public name: JSString = JSString.Empty,
     public length: number = -1,
@@ -264,17 +270,21 @@ export class JSFunction extends JSObject {
   ) {
     super(new Map())
 
-    this.setDescriptor(
-      '__proto__',
-      new JSPropertyDescriptor(assertDef(JSFunction.protoType), false)
-    )
+    this.inline = !upvalue
+
+    if (JSFunction.protoType) {
+      this.setDescriptor(
+        '__proto__',
+        new JSPropertyDescriptor(assertDef(JSFunction.protoType), false)
+      )
+    }
     this.setDescriptor(
       'prototype',
       new JSPropertyDescriptor(new JSObject(), false)
     )
   }
 
-  static protoType: JSObject
+  static protoType: JSValue
 
   isFunction(): this is JSFunction {
     return true
@@ -344,6 +354,19 @@ export class JSNativeFunction extends JSBirdgeFunction {
   }
 }
 
+export class JSJitFunction extends JSBirdgeFunction {
+  private nativeFunc: (...args: number[]) => number
+  constructor(public name: JSString, func: JSFunction) {
+    super(name, () => JSUndefined.instance)
+
+    this.nativeFunc = eval(`(${func.text})`)
+  }
+
+  apply(self: JSUndefined, args: JSNumber[]) {
+    return new JSNumber(this.nativeFunc.apply(self, args.map(x => x.value)))
+  }
+}
+
 export class JSArray extends JSObject {
   constructor(public items: VObject[]) {
     super(new Map(items.map((item, i) => [i, item])))
@@ -354,7 +377,7 @@ export class JSArray extends JSObject {
     )
   }
 
-  static protoType: JSObject
+  static protoType: JSValue
 
   asArray() {
     return this
@@ -388,12 +411,12 @@ export enum LValueType {
 
 export interface LValueInfoIdentifier {
   type: LValueType.identifier
-  name: VObject
+  name: JSString
 }
 
 export interface LValueInfoPropertyAccess {
   type: LValueType.propertyAccess
-  obj: JSObject
+  obj: JSValue
   name: VObject
 }
 

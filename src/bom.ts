@@ -6,7 +6,8 @@ import {
   JSArray,
   JSFunction,
   JSNumber,
-  JSBirdgeFunction
+  JSBirdgeFunction,
+  JSValue
 } from './value'
 import { JSPropertyDescriptor, Callable } from './types'
 
@@ -53,11 +54,11 @@ export function initPrototype(vm: Callable, valueTable: Map<string, VObject>) {
 
 function initMetaObjectProto(metaObjectProto: JSObject) {}
 
-function initMetaFunctionProto(vm: Callable, metaFunctionProto: JSObject) {
+function initMetaFunctionProto(vm: Callable, metaFunctionProto: JSValue) {
   metaFunctionProto.set(
     new JSString('call'),
     new JSBirdgeFunction(new JSString('call'), function(self, ...args) {
-      if (this.isObject() && this.isFunction()) {
+      if (this.isValue() && this.isFunction()) {
         vm.call(this, args, self)
         return
       }
@@ -68,9 +69,9 @@ function initMetaFunctionProto(vm: Callable, metaFunctionProto: JSObject) {
     new JSString('apply'),
     new JSBirdgeFunction(new JSString('apply'), function(self, args) {
       if (
-        this.isObject() &&
+        this.isValue() &&
         this.isFunction() &&
-        args.isObject() &&
+        args.isValue() &&
         args.isArray()
       ) {
         vm.call(this, args.items, self)
@@ -82,7 +83,7 @@ function initMetaFunctionProto(vm: Callable, metaFunctionProto: JSObject) {
   metaFunctionProto.set(
     new JSString('bind'),
     new JSNativeFunction(new JSString('bind'), function(self, ...args) {
-      if (this.isObject() && this.isFunction()) {
+      if (this.isValue() && this.isFunction()) {
         const callee = this
         return new JSBirdgeFunction(JSString.Empty, function() {
           vm.call(callee, args, self)
@@ -94,7 +95,7 @@ function initMetaFunctionProto(vm: Callable, metaFunctionProto: JSObject) {
   metaFunctionProto.set(
     new JSString('toString'),
     new JSNativeFunction(new JSString('toString'), function() {
-      if (this.isObject() && this.isFunction()) {
+      if (this.isValue() && this.isFunction()) {
         if (!this.isBridge() || !this.isNative()) {
           return new JSString(this.text)
         } else {
@@ -112,7 +113,7 @@ function initObjectConstructor(objectCtor: JSNativeFunction) {
   objectCtor.set(
     new JSString('keys'),
     new JSNativeFunction(new JSString('keys'), obj => {
-      if (obj.isObject()) {
+      if (obj.isValue()) {
         return new JSArray(
           Array.from(obj.properties.entries())
             .filter(([_, value]) => !!value.enumerable)
@@ -136,12 +137,12 @@ function initArrayConstructor(valueTable: Map<string, VObject>) {
   araryProto.set(
     new JSString('join'),
     new JSNativeFunction(new JSString('join'), function(str) {
-      if (this.isObject() && this.isArray() && str.isString()) {
+      if (this.isValue() && this.isArray() && str.isString()) {
         return new JSString(
           this.items.map(x => x.asString().value).join(str.value)
         )
       }
-      return new JSString('')
+      throw new Error('type error')
     })
   )
 
@@ -152,10 +153,10 @@ function initArrayConstructor(valueTable: Map<string, VObject>) {
       false,
       true,
       new JSNativeFunction(new JSString(''), function() {
-        if (this.isObject() && this.isArray()) {
+        if (this.isValue() && this.isArray()) {
           return new JSNumber(this.items.length)
         }
-        return new JSNumber(0)
+        throw new Error('type error')
       })
     )
   )
@@ -180,7 +181,7 @@ function initStringConstructor(valueTable: Map<string, VObject>) {
           this.value.split(str.value).map(x => new JSString(x))
         )
       }
-      return new JSArray([])
+      throw new Error('type error')
     })
   )
 
@@ -194,7 +195,7 @@ function initStringConstructor(valueTable: Map<string, VObject>) {
         if (this.isString()) {
           return new JSNumber(this.value.length)
         }
-        return new JSNumber(0)
+        throw new Error('type error')
       })
     )
   )
