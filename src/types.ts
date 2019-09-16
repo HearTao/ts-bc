@@ -101,10 +101,20 @@ export enum ObjectMemberType {
 
 export interface Callable {
   call(callee: JSFunction, args: VObject[], thisObject: VObject): void
+
+  gc(): number
 }
 
 export interface LexerContext {
   func: ts.FunctionLikeDeclaration
   upValue: Set<string>
   locals: ts.SymbolTable[]
+}
+
+export class HeapEntry {
+  public ref: number = 0
+
+  constructor(
+    public value: string | Array<any> | Map<string | number, VObject>
+  ) {}
 }

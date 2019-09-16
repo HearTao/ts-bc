@@ -31,7 +31,10 @@ import {
   LValueType,
   ConstantValue,
   ConstantValueType,
-  JSValue
+  JSValue,
+  JSPrimitive,
+  JSReference,
+  JSHeapValue
 } from './value'
 import { init } from './bom'
 
@@ -39,6 +42,7 @@ export default class VirtualMachine implements Callable {
   private stack: VObject[] = []
   private frames: StackFrame[] = []
   private environments: Environment[] = []
+  private heap: JSHeapValue[] = []
 
   constructor(
     private codes: (OpCode | OpValue)[] = [],
@@ -63,10 +67,13 @@ export default class VirtualMachine implements Callable {
     return valueTable
   }
 
-  private popStack() {
+  private popStack(deRef: boolean = true) {
     const value = this.stack.pop()
     if (!value) {
       throw new Error('no value')
+    }
+    if (deRef && value.isReference()) {
+      return this.heap[value.idx]
     }
     return value
   }
@@ -158,6 +165,61 @@ export default class VirtualMachine implements Callable {
     return this.exec()
   }
 
+  gc() {
+    const seen = new Set<VObject>()
+    const visitValue = (value: VObject) => {
+      if (seen.has(value)) {
+        return
+      } else {
+        seen.add(value)
+      }
+
+      if (value.isPrimitive()) return
+      if (value.isString()) return
+      if (value.isObject()) {
+        if (value.isArray()) {
+          value.items.forEach(visitValue)
+        }
+        if (value.isFunction()) {
+          visitValue(value.name)
+          value.upvalue.forEach(visitValue)
+        }
+        Array.from(value.properties.values()).forEach(desc => {
+          if (desc.value) {
+            visitValue(desc.value)
+          }
+        })
+        return
+      }
+
+      if (value.isReference()) {
+        if (refIdx.has(value.idx)) {
+          refIdx.set(value.idx, refIdx.get(value.idx)!.concat([value]))
+        } else {
+          refIdx.set(value.idx, [value])
+        }
+
+        visitValue(this.heap[value.idx])
+      }
+    }
+
+    const refIdx = new Map<number, JSReference[]>()
+    this.environments.forEach(env => env.valueTable.forEach(visitValue))
+
+    const newHeap: JSHeapValue[] = []
+    Array.from(refIdx.entries()).forEach(([index, refs]) => {
+      const val = this.heap[index]
+      const newIdx = newHeap.length
+      newHeap.push(val)
+      refs.forEach(ref => (ref.idx = newIdx))
+    })
+
+    const count = this.heap.length - newHeap.length
+    this.heap = newHeap
+
+    return count
+  }
+
   exec(step: true): ExecResult
   exec(step?: false): DoneResult
   exec(step?: boolean): ExecResult {
@@ -233,13 +295,13 @@ export default class VirtualMachine implements Callable {
 
         case OpCode.Def: {
           const name = this.popStack()
-          const initializer = this.popStack()
+          const initializer = this.popStack(false)
           this.define(name.asString().value, initializer, EnvironmentType.lexer)
           break
         }
         case OpCode.DefBlock: {
           const name = this.popStack()
-          const initializer = this.popStack()
+          const initializer = this.popStack(false)
           this.define(name.asString().value, initializer, EnvironmentType.block)
           break
         }
@@ -290,7 +352,7 @@ export default class VirtualMachine implements Callable {
         }
 
         case OpCode.ExitBlockScope: {
-          this.environments.pop()
+          const top = this.environments.pop()!
           break
         }
 
@@ -348,8 +410,12 @@ export default class VirtualMachine implements Callable {
             throw new Error('not supported index access')
           }
 
-          const callee = this.popStack()
+          let callee = this.popStack()
           const length = this.popStack()
+
+          if (callee.isReference()) {
+            callee = this.heap[callee.idx]
+          }
 
           if (!callee.isValue() || !callee.isFunction()) {
             throw new Error('is not callable')
@@ -365,8 +431,12 @@ export default class VirtualMachine implements Callable {
         }
 
         case OpCode.Call: {
-          const callee = this.popStack()
+          let callee = this.popStack()
           const length = this.popStack()
+
+          if (callee.isReference()) {
+            callee = this.heap[callee.idx]
+          }
 
           if (!callee.isValue() || !callee.isFunction()) {
             throw new Error('is not callable')
@@ -437,7 +507,9 @@ export default class VirtualMachine implements Callable {
           for (let i = 0; i < len; ++i) {
             arr.push(elements.pop()!)
           }
-          this.stack.push(new JSArray(arr))
+          const ref = new JSReference(this.heap.length)
+          this.heap.push(new JSArray(arr))
+          this.stack.push(ref)
           break
         }
 
@@ -461,8 +533,10 @@ export default class VirtualMachine implements Callable {
             upValue,
             code.asString().value
           )
-          this.define(name.asString().value, func, EnvironmentType.lexer)
-          this.stack.push(func)
+          const ref = new JSReference(this.heap.length)
+          this.heap.push(func)
+          this.define(name.asString().value, ref, EnvironmentType.lexer)
+          this.stack.push(ref)
 
           upValues.forEach(name => upValue.set(name, this.lookup(name)))
           break
@@ -487,7 +561,9 @@ export default class VirtualMachine implements Callable {
             upValue,
             code.asString().value
           )
-          this.stack.push(func)
+          const ref = new JSReference(this.heap.length)
+          this.heap.push(func)
+          this.stack.push(ref)
 
           upValues.forEach(name => upValue.set(name, this.lookup(name)))
           break
@@ -521,7 +597,9 @@ export default class VirtualMachine implements Callable {
               throw new Error('invalid object key')
             }
           }
-          this.stack.push(obj)
+          const ref = new JSReference(this.heap.length)
+          this.heap.push(obj)
+          this.stack.push(ref)
           break
         }
 
@@ -634,7 +712,7 @@ export default class VirtualMachine implements Callable {
 
         case OpCode.SetLeftValue: {
           const lvalue = this.popStack() as JSLValue
-          const value = this.popStack()
+          const value = this.popStack(false)
           if (lvalue.info.type === LValueType.identifier) {
             this.setValue(lvalue.info.name.asString().value, value)
           } else {

@@ -34,6 +34,10 @@ export type ConstantValue =
 export abstract class VObject {
   public abstract debugValue(): any
 
+  isReference(): this is JSReference {
+    return false
+  }
+
   isNumber(): this is JSNumber {
     return false
   }
@@ -86,7 +90,6 @@ export abstract class VObject {
 }
 
 export class JSValue extends VObject {
-  private rc: number = 0
   public properties: Map<string | number, JSPropertyDescriptor> = new Map()
 
   constructor(properties: Map<string | number, VObject> = new Map()) {
@@ -119,6 +122,10 @@ export class JSValue extends VObject {
     return false
   }
 
+  isHeapValue(): this is JSHeapValue {
+    return true
+  }
+
   get(key: JSString | JSNumber): VObject | JSUndefined {
     if (this.properties.has(key.value)) {
       const descriptor = this.properties.get(key.value)!
@@ -146,7 +153,46 @@ export class JSValue extends VObject {
   }
 }
 
-export class JSObject extends JSValue {
+export class JSReference extends JSValue {
+  constructor(public idx: number) {
+    super()
+  }
+
+  isReference(): this is JSReference {
+    return true
+  }
+}
+
+export class JSHeapValue extends JSValue {
+  isHeapValue(): this is JSHeapValue {
+    return true
+  }
+}
+
+export class JSString extends JSHeapValue {
+  constructor(public value: string) {
+    super()
+
+    this.setDescriptor(
+      '__proto__',
+      new JSPropertyDescriptor(JSString.protoType, false)
+    )
+  }
+
+  static protoType: JSObject
+
+  static Empty = new JSString('')
+
+  isString(): this is JSString {
+    return true
+  }
+
+  debugValue(): any {
+    return this.value
+  }
+}
+
+export class JSObject extends JSHeapValue {
   constructor(properties: Map<string | number, VObject> = new Map()) {
     super(properties)
 
@@ -215,25 +261,6 @@ export class JSNumber extends JSPrimitive {
 
   asBoolean() {
     return new JSBoolean(!!this.value)
-  }
-}
-
-export class JSString extends JSPrimitive {
-  constructor(public value: string) {
-    super()
-
-    this.setDescriptor(
-      '__proto__',
-      new JSPropertyDescriptor(JSString.protoType, false)
-    )
-  }
-
-  static protoType: JSObject
-
-  static Empty = new JSString('')
-
-  isString(): this is JSString {
-    return true
   }
 }
 
