@@ -154,7 +154,7 @@ export class JSValue extends VObject {
 }
 
 export class JSReference extends JSValue {
-  constructor (public idx: number) {
+  constructor(public idx: number) {
     super()
   }
 

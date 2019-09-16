@@ -211,7 +211,7 @@ export default class VirtualMachine implements Callable {
       const val = this.heap[index]
       const newIdx = newHeap.length
       newHeap.push(val)
-      refs.forEach(ref => ref.idx = newIdx)
+      refs.forEach(ref => (ref.idx = newIdx))
     })
 
     const count = this.heap.length - newHeap.length
