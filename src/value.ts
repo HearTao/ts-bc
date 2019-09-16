@@ -122,6 +122,10 @@ export class JSValue extends VObject {
     return false
   }
 
+  isHeapValue(): this is JSHeapValue {
+    return true
+  }
+
   get(key: JSString | JSNumber): VObject | JSUndefined {
     if (this.properties.has(key.value)) {
       const descriptor = this.properties.get(key.value)!
@@ -160,7 +164,9 @@ export class JSReference extends JSValue {
 }
 
 export class JSHeapValue extends JSValue {
-
+  isHeapValue(): this is JSHeapValue {
+    return true
+  }
 }
 
 export class JSString extends JSHeapValue {
@@ -179,6 +185,10 @@ export class JSString extends JSHeapValue {
 
   isString(): this is JSString {
     return true
+  }
+
+  debugValue(): any {
+    return this.value
   }
 }
 

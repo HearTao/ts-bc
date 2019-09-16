@@ -67,10 +67,13 @@ export default class VirtualMachine implements Callable {
     return valueTable
   }
 
-  private popStack() {
+  private popStack(deRef: boolean = true) {
     const value = this.stack.pop()
     if (!value) {
       throw new Error('no value')
+    }
+    if (deRef && value.isReference()) {
+      return this.heap[value.idx]
     }
     return value
   }
@@ -292,13 +295,13 @@ export default class VirtualMachine implements Callable {
 
         case OpCode.Def: {
           const name = this.popStack()
-          const initializer = this.popStack()
+          const initializer = this.popStack(false)
           this.define(name.asString().value, initializer, EnvironmentType.lexer)
           break
         }
         case OpCode.DefBlock: {
           const name = this.popStack()
-          const initializer = this.popStack()
+          const initializer = this.popStack(false)
           this.define(name.asString().value, initializer, EnvironmentType.block)
           break
         }
@@ -535,7 +538,9 @@ export default class VirtualMachine implements Callable {
           this.define(name.asString().value, ref, EnvironmentType.lexer)
           this.stack.push(ref)
 
-          upValues.forEach(name => upValue.set(name, this.lookup(name)))
+          upValues.forEach(name => {
+            upValue.set(name, this.lookup(name))
+          })
           break
         }
 
@@ -709,7 +714,7 @@ export default class VirtualMachine implements Callable {
 
         case OpCode.SetLeftValue: {
           const lvalue = this.popStack() as JSLValue
-          const value = this.popStack()
+          const value = this.popStack(false)
           if (lvalue.info.type === LValueType.identifier) {
             this.setValue(lvalue.info.name.asString().value, value)
           } else {
