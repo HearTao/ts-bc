@@ -108,3 +108,11 @@ export interface LexerContext {
   upValue: Set<string>
   locals: ts.SymbolTable[]
 }
+
+export class HeapEntry {
+  public ref: number = 0
+
+  constructor (public value: string | Array<any> | Map<string | number, VObject>) {
+
+  }
+}

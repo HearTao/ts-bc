@@ -31,7 +31,10 @@ import {
   LValueType,
   ConstantValue,
   ConstantValueType,
-  JSValue
+  JSValue,
+  JSPrimitive,
+  JSReference,
+  JSHeapValue
 } from './value'
 import { init } from './bom'
 
@@ -39,6 +42,7 @@ export default class VirtualMachine implements Callable {
   private stack: VObject[] = []
   private frames: StackFrame[] = []
   private environments: Environment[] = []
+  private heap: JSHeapValue[] = []
 
   constructor(
     private codes: (OpCode | OpValue)[] = [],
@@ -102,6 +106,9 @@ export default class VirtualMachine implements Callable {
         continue
       }
       env.valueTable.set(name, value)
+      if (value.isReference()) {
+        this.heap[value.idx].incr()
+      }
       return
     }
   }
@@ -290,7 +297,12 @@ export default class VirtualMachine implements Callable {
         }
 
         case OpCode.ExitBlockScope: {
-          this.environments.pop()
+          const top = this.environments.pop()!
+          top.valueTable.forEach(v => {
+            if (v.isReference()) {
+              this.heap[v.idx].decr()
+            }
+          })
           break
         }
 
@@ -302,6 +314,11 @@ export default class VirtualMachine implements Callable {
             EnvironmentType.block
           ) {
             const top = this.environments.pop() as BlockEnvironment
+            top.valueTable.forEach(v => {
+              if (v.isReference()) {
+                this.heap[v.idx].decr()
+              }
+            })
             if (top.kind === BlockEnvironmentKind.iterable) {
               env = top as IterableBlockEnviroment
               break
@@ -324,6 +341,11 @@ export default class VirtualMachine implements Callable {
             EnvironmentType.block
           ) {
             const top = this.environments.pop() as BlockEnvironment
+            top.valueTable.forEach(v => {
+              if (v.isReference()) {
+                this.heap[v.idx].decr()
+              }
+            })
             if (top.kind === BlockEnvironmentKind.labeled) {
               env = top as LabeledBlockEnvironment
               break
@@ -348,8 +370,12 @@ export default class VirtualMachine implements Callable {
             throw new Error('not supported index access')
           }
 
-          const callee = this.popStack()
+          let callee = this.popStack()
           const length = this.popStack()
+
+          if (callee.isReference()) {
+            callee = this.heap[callee.idx]
+          }
 
           if (!callee.isValue() || !callee.isFunction()) {
             throw new Error('is not callable')
@@ -365,8 +391,12 @@ export default class VirtualMachine implements Callable {
         }
 
         case OpCode.Call: {
-          const callee = this.popStack()
+          let callee = this.popStack()
           const length = this.popStack()
+
+          if (callee.isReference()) {
+            callee = this.heap[callee.idx]
+          }
 
           if (!callee.isValue() || !callee.isFunction()) {
             throw new Error('is not callable')
@@ -384,6 +414,13 @@ export default class VirtualMachine implements Callable {
         case OpCode.Ret: {
           const ret = this.popStack()
           const frame = this.frames.pop()!
+
+          frame.environments.valueTable.forEach(v => {
+            if (v.isReference()) {
+              this.heap[v.idx].decr()
+            }
+          })
+
           this.cur = frame.ret
           this.stack = this.stack.slice(0, frame.entry)
           this.stack.push(ret)
@@ -437,7 +474,9 @@ export default class VirtualMachine implements Callable {
           for (let i = 0; i < len; ++i) {
             arr.push(elements.pop()!)
           }
-          this.stack.push(new JSArray(arr))
+          const ref = new JSReference(this.heap.length)
+          this.heap.push(new JSArray(arr))
+          this.stack.push(ref)
           break
         }
 
@@ -461,8 +500,10 @@ export default class VirtualMachine implements Callable {
             upValue,
             code.asString().value
           )
-          this.define(name.asString().value, func, EnvironmentType.lexer)
-          this.stack.push(func)
+          const ref = new JSReference(this.heap.length)
+          this.heap.push(func)
+          this.define(name.asString().value, ref, EnvironmentType.lexer)
+          this.stack.push(ref)
 
           upValues.forEach(name => upValue.set(name, this.lookup(name)))
           break
@@ -487,7 +528,9 @@ export default class VirtualMachine implements Callable {
             upValue,
             code.asString().value
           )
-          this.stack.push(func)
+          const ref = new JSReference(this.heap.length)
+          this.heap.push(func)
+          this.stack.push(ref)
 
           upValues.forEach(name => upValue.set(name, this.lookup(name)))
           break
@@ -521,7 +564,9 @@ export default class VirtualMachine implements Callable {
               throw new Error('invalid object key')
             }
           }
-          this.stack.push(obj)
+          const ref = new JSReference(this.heap.length)
+          this.heap.push(obj)
+          this.stack.push(ref)
           break
         }
 
@@ -637,12 +682,18 @@ export default class VirtualMachine implements Callable {
           const value = this.popStack()
           if (lvalue.info.type === LValueType.identifier) {
             this.setValue(lvalue.info.name.asString().value, value)
+            if (value.isReference()) {
+              this.heap[value.idx].incr()
+            }
           } else {
             if (
               lvalue.info.obj.isObject() &&
               (lvalue.info.name.isNumber() || lvalue.info.name.isString())
             ) {
               lvalue.info.obj.set(lvalue.info.name, value)
+              if (value.isReference()) {
+                this.heap[value.idx].incr()
+              }
             } else {
               throw new Error('invalid lhs assignment')
             }
