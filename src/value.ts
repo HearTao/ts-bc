@@ -307,12 +307,32 @@ export class JSFunction extends JSObject {
     return true
   }
 
+  isGenerator(): this is JSGeneratorFunction {
+    return false
+  }
+
   isBridge(): this is JSBirdgeFunction {
     return false
   }
 
   isLambda(): this is JSLambda {
     return false
+  }
+}
+
+export class JSGeneratorFunction extends JSFunction {
+  constructor(
+    name: JSString = JSString.Empty,
+    length: number = -1,
+    pos: number = -1,
+    upvalue: Map<string, VObject> = new Map(),
+    text: string = ''
+  ) {
+    super(name, length, pos, upvalue, text)
+  }
+
+  isGenerator(): this is JSGeneratorFunction {
+    return true
   }
 }
 
@@ -428,6 +448,16 @@ export type LValueInfo = LValueInfoIdentifier | LValueInfoPropertyAccess
 
 export class JSLValue extends VObject {
   constructor(public info: LValueInfo) {
+    super()
+  }
+
+  debugValue(): any {
+    return this
+  }
+}
+
+export class YieldContext extends VObject {
+  constructor(public pos: number) {
     super()
   }
 

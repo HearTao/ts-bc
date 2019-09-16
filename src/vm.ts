@@ -32,7 +32,6 @@ import {
   ConstantValue,
   ConstantValueType,
   JSValue,
-  JSPrimitive,
   JSReference,
   JSHeapValue
 } from './value'
@@ -725,6 +724,46 @@ export default class VirtualMachine implements Callable {
               throw new Error('invalid lhs assignment')
             }
           }
+          break
+        }
+
+        case OpCode.CreateGenerator: {
+          const code = this.popStack()
+          const name = this.popStack()
+          const length = this.popStack()
+          const pos = this.popStack()
+          const upValueCount = this.popStack()
+          const upValues: string[] = []
+          const upValue: Map<string, VObject> = new Map()
+
+          for (let i = 0; i < upValueCount.asNumber().value; ++i) {
+            upValues.push(this.popStack().asString().value)
+          }
+
+          const func = new JSFunction(
+            name.asString(),
+            length.asNumber().value,
+            pos.asNumber().value,
+            upValue,
+            code.asString().value
+          )
+          const ref = new JSReference(this.heap.length)
+          this.heap.push(func)
+          this.define(name.asString().value, ref, EnvironmentType.lexer)
+          this.stack.push(ref)
+
+          upValues.forEach(name => upValue.set(name, this.lookup(name)))
+          break;
+        }
+
+        case OpCode.Yield: {
+          // const pos = this.popCode()
+          // const value = this.popStack()
+          // this.stack.push(new )
+          break
+        }
+
+        case OpCode.YieldStar: {
           break
         }
 

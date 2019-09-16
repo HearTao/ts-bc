@@ -119,6 +119,9 @@ export function gen(code: string): [(OpCode | OpValue)[], ConstantValue[]] {
       case ts.SyntaxKind.FalseKeyword:
         visitBooleanLiteral(<ts.BooleanLiteral>node)
         break
+      case ts.SyntaxKind.YieldExpression:
+        visitYieldExpression(<ts.YieldExpression>node)
+        break
       default:
         ts.forEachChild(node, visitor)
     }
@@ -156,6 +159,19 @@ export function gen(code: string): [(OpCode | OpValue)[], ConstantValue[]] {
 
     op.push(OpCode.Const)
     op.push({ value: constants.length - 1 })
+  }
+
+  function visitYieldExpression(expr: ts.YieldExpression) {
+    // const label1 = createLabel()
+
+    // if (!expr.expression) {
+    //   op.push(OpCode.Undefined)
+    // } else {
+    //   visitor(expr.expression)
+    // }
+    // op.push(OpCode.Yield)
+    // op.push(label1)
+    // updateLabel(label1)
   }
 
   function visitInBlockScope<T extends ts.Node>(stmt: T, cb: () => void) {
@@ -477,7 +493,59 @@ export function gen(code: string): [(OpCode | OpValue)[], ConstantValue[]] {
     }
   }
 
+  function visitGeneratorDeclaration (func: ts.FunctionDeclaration) {
+    const body = func.body
+    if (!body) {
+      throw new Error('function must have body')
+    }
+
+    const label1 = createLabel()
+    const label2 = createLabel()
+
+    op.push(OpCode.Jump)
+    op.push(label2)
+
+    updateLabel(label1)
+    func.parameters.forEach(visitor)
+
+    lexerContext.push({
+      func,
+      upValue: new Set(),
+      locals: []
+    })
+
+    body.statements.forEach(visitor)
+    op.push(OpCode.Undefined)
+
+    op.push(OpCode.Ret)
+    updateLabel(label2)
+
+    const context = lexerContext.pop()!
+    context.upValue.forEach(u => pushConst(u))
+    op.push(OpCode.Push)
+    op.push({ value: context.upValue.size })
+
+    op.push(OpCode.Push)
+    op.push(label1)
+    pushConst(func.parameters.length)
+
+    if (func.name) {
+      visitPropertyName(func.name)
+    } else {
+      pushConst('')
+    }
+    pushConst(func.getText())
+    op.push(OpCode.CreateGenerator)
+  }
+
   function visitFunctionLikeDeclaration(func: ts.FunctionLikeDeclaration) {
+    if (func.asteriskToken) {
+      if (ts.isFunctionDeclaration(func)) {
+        return visitGeneratorDeclaration(func)
+      }
+      throw new Error('generator support func declaration only')
+    }
+    
     const body = func.body
     if (!body) {
       throw new Error('function must have body')
