@@ -60,6 +60,9 @@ export enum OpCode {
   Call,
   CallMethod,
 
+  Yield,
+  YieldStar,
+
   Null,
   Undefined,
   False,
@@ -69,6 +72,7 @@ export enum OpCode {
 
   CreateArray,
   CreateFunction,
+  CreateGenerator,
   CreateLambda,
   CreateObject,
 
