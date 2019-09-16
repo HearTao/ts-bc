@@ -6,7 +6,8 @@ import {
   JSArray,
   JSFunction,
   JSNumber,
-  JSBirdgeFunction
+  JSBirdgeFunction,
+  JSUndefined
 } from './value'
 import { JSPropertyDescriptor, Callable } from './types'
 
@@ -15,6 +16,14 @@ export function init(vm: Callable, valueTable: Map<string, VObject>) {
 
   initArrayConstructor(valueTable)
   initStringConstructor(valueTable)
+
+  initGC(vm, valueTable)
+}
+
+export function initGC(vm: Callable, valueTable: Map<string, VObject>) {
+  valueTable.set('gc', new JSNativeFunction(new JSString('gc'), () => {
+    return new JSNumber(vm.gc())
+  }))
 }
 
 export function initPrototype(vm: Callable, valueTable: Map<string, VObject>) {

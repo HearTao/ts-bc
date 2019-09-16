@@ -2,19 +2,14 @@ import VirtualMachine, { gen, JSString, VObject } from '../src'
 
 const code = `
 function foo() {
-  var a = 0;
-  function bar () {
-    a += 1;
-    for (let i = 0; i < 10; ++i) {
-      a = a + i - i
-    }
-    return a;
+  for (let i = 0; i < 10; i++) {
+    let a = {}
+    // a.a = {}
   }
-  return bar;
+  return 42
 }
-var b = foo();
-b();
-b()
+foo()
+gc()
 `
 const [op, value] = gen(code)
 
@@ -22,4 +17,4 @@ const vm = new VirtualMachine(op, value)
 
 console.log(`code: ${code}`)
 console.log(`vm: ${vm.exec().value.debugValue()}`)
-console.log(`eval: ${eval(code)}`)
+// console.log(`eval: ${eval(code)}`)

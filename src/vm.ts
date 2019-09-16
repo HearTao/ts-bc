@@ -106,9 +106,6 @@ export default class VirtualMachine implements Callable {
         continue
       }
       env.valueTable.set(name, value)
-      if (value.isReference()) {
-        this.heap[value.idx].incr()
-      }
       return
     }
   }
@@ -163,6 +160,61 @@ export default class VirtualMachine implements Callable {
 
   step(): DoneResult {
     return this.exec()
+  }
+
+  gc() {
+    const seen = new Set<VObject>()
+    const visitValue = (value: VObject) => {
+      if (seen.has(value)) {
+        return
+      } else {
+        seen.add(value)
+      }
+
+      if (value.isPrimitive()) return
+      if (value.isString()) return
+      if (value.isObject()) {
+        if (value.isArray()) {
+          value.items.forEach(visitValue)
+        }
+        if (value.isFunction()) {
+          visitValue(value.name)
+          value.upvalue.forEach(visitValue)
+        }
+        Array.from(value.properties.values()).forEach(desc => {
+          if (desc.value) {
+            visitValue(desc.value)
+          }
+        })
+        return
+      }
+
+      if (value.isReference()) {
+        if (refIdx.has(value.idx)) {
+          refIdx.set(value.idx, refIdx.get(value.idx)!.concat([value]))
+        } else {
+          refIdx.set(value.idx, [value])
+        }
+
+        visitValue(this.heap[value.idx])
+      }
+    }
+
+    const refIdx = new Map<number, JSReference[]>()
+    this.environments.forEach(env => env.valueTable.forEach(visitValue))
+
+    const newHeap: JSHeapValue[] = []
+    Array.from(refIdx.entries()).forEach(([index, refs]) => {
+      const val = this.heap[index]
+      const newIdx = newHeap.length
+      newHeap.push(val)
+      refs.forEach(ref => ref.idx = newIdx)
+    })
+
+    const count = this.heap.length - newHeap.length
+    this.heap = newHeap
+
+    return count
   }
 
   exec(step: true): ExecResult
@@ -298,11 +350,6 @@ export default class VirtualMachine implements Callable {
 
         case OpCode.ExitBlockScope: {
           const top = this.environments.pop()!
-          top.valueTable.forEach(v => {
-            if (v.isReference()) {
-              this.heap[v.idx].decr()
-            }
-          })
           break
         }
 
@@ -314,11 +361,6 @@ export default class VirtualMachine implements Callable {
             EnvironmentType.block
           ) {
             const top = this.environments.pop() as BlockEnvironment
-            top.valueTable.forEach(v => {
-              if (v.isReference()) {
-                this.heap[v.idx].decr()
-              }
-            })
             if (top.kind === BlockEnvironmentKind.iterable) {
               env = top as IterableBlockEnviroment
               break
@@ -341,11 +383,6 @@ export default class VirtualMachine implements Callable {
             EnvironmentType.block
           ) {
             const top = this.environments.pop() as BlockEnvironment
-            top.valueTable.forEach(v => {
-              if (v.isReference()) {
-                this.heap[v.idx].decr()
-              }
-            })
             if (top.kind === BlockEnvironmentKind.labeled) {
               env = top as LabeledBlockEnvironment
               break
@@ -414,13 +451,6 @@ export default class VirtualMachine implements Callable {
         case OpCode.Ret: {
           const ret = this.popStack()
           const frame = this.frames.pop()!
-
-          frame.environments.valueTable.forEach(v => {
-            if (v.isReference()) {
-              this.heap[v.idx].decr()
-            }
-          })
-
           this.cur = frame.ret
           this.stack = this.stack.slice(0, frame.entry)
           this.stack.push(ret)
@@ -682,18 +712,12 @@ export default class VirtualMachine implements Callable {
           const value = this.popStack()
           if (lvalue.info.type === LValueType.identifier) {
             this.setValue(lvalue.info.name.asString().value, value)
-            if (value.isReference()) {
-              this.heap[value.idx].incr()
-            }
           } else {
             if (
               lvalue.info.obj.isObject() &&
               (lvalue.info.name.isNumber() || lvalue.info.name.isString())
             ) {
               lvalue.info.obj.set(lvalue.info.name, value)
-              if (value.isReference()) {
-                this.heap[value.idx].incr()
-              }
             } else {
               throw new Error('invalid lhs assignment')
             }

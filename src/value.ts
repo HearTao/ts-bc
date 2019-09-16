@@ -160,18 +160,7 @@ export class JSReference extends JSValue {
 }
 
 export class JSHeapValue extends JSValue {
-  rc: number = 0
 
-  incr () {
-    this.rc++
-  }
-
-  decr () {
-    this.rc--
-    if (this.rc === 0) {
-      console.log('ref free')
-    }
-  }
 }
 
 export class JSString extends JSHeapValue {

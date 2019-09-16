@@ -101,6 +101,8 @@ export enum ObjectMemberType {
 
 export interface Callable {
   call(callee: JSFunction, args: VObject[], thisObject: VObject): void
+
+  gc(): number
 }
 
 export interface LexerContext {
