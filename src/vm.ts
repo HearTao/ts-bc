@@ -538,9 +538,7 @@ export default class VirtualMachine implements Callable {
           this.define(name.asString().value, ref, EnvironmentType.lexer)
           this.stack.push(ref)
 
-          upValues.forEach(name => {
-            upValue.set(name, this.lookup(name))
-          })
+          upValues.forEach(name => upValue.set(name, this.lookup(name)))
           break
         }
 
