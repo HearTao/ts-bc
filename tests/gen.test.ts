@@ -594,6 +594,21 @@ test(`should work with generator`, () => {
   run(code)
 })
 
+test(`should work with generator return`, () => {
+  const code = `
+    function * foo(a) {
+      yield a + 1
+      yield a + 2
+      yield (1 + (yield a + 3))
+      return 42
+    }
+    var iter = foo(4)
+    iter.next()
+    ;[iter.return(5), iter.next(), iter.return(43), iter.return()]
+  `
+  run(code)
+})
+
 test(`should work with step exec`, () => {
   const code = '0 ? 2 : 0 ? 3 : 4'
   stepRun(code)

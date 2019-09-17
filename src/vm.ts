@@ -777,6 +777,13 @@ export default class VirtualMachine implements Callable {
               [
                 'next',
                 new JSBirdgeFunction(new JSString('next'), obj => {
+                  if (context.done) {
+                    this.stack.push(
+                      this.generatorResult(JSUndefined.instance, true)
+                    )
+                    return
+                  }
+
                   context.ret = this.cur
                   context.frame.entry = this.stack.length
 
@@ -786,6 +793,16 @@ export default class VirtualMachine implements Callable {
                   this.stack.push(...context.stack)
                   this.stack.push(obj || JSUndefined.instance)
                   this.cur = context.pos
+                  return
+                })
+              ],
+              [
+                'return',
+                new JSBirdgeFunction(new JSString('return'), obj => {
+                  context.done = true
+                  this.stack.push(
+                    this.generatorResult(obj || JSUndefined.instance, true)
+                  )
                   return
                 })
               ]
