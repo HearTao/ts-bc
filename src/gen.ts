@@ -162,16 +162,12 @@ export function gen(code: string): [(OpCode | OpValue)[], ConstantValue[]] {
   }
 
   function visitYieldExpression(expr: ts.YieldExpression) {
-    // const label1 = createLabel()
-
-    // if (!expr.expression) {
-    //   op.push(OpCode.Undefined)
-    // } else {
-    //   visitor(expr.expression)
-    // }
-    // op.push(OpCode.Yield)
-    // op.push(label1)
-    // updateLabel(label1)
+    if (!expr.expression) {
+      op.push(OpCode.Undefined)
+    } else {
+      visitor(expr.expression)
+    }
+    op.push(OpCode.Yield)
   }
 
   function visitInBlockScope<T extends ts.Node>(stmt: T, cb: () => void) {
@@ -477,7 +473,12 @@ export function gen(code: string): [(OpCode | OpValue)[], ConstantValue[]] {
     } else {
       op.push(OpCode.Undefined)
     }
-    op.push(OpCode.Ret)
+
+    if (lexerContext[lexerContext.length - 1].func.asteriskToken) {
+      op.push(OpCode.GeneratorReturn)
+    } else {
+      op.push(OpCode.Ret)
+    }
   }
 
   function visitCallExpression(call: ts.CallExpression) {
@@ -493,7 +494,7 @@ export function gen(code: string): [(OpCode | OpValue)[], ConstantValue[]] {
     }
   }
 
-  function visitGeneratorDeclaration (func: ts.FunctionDeclaration) {
+  function visitGeneratorDeclaration(func: ts.FunctionDeclaration) {
     const body = func.body
     if (!body) {
       throw new Error('function must have body')
@@ -501,6 +502,8 @@ export function gen(code: string): [(OpCode | OpValue)[], ConstantValue[]] {
 
     const label1 = createLabel()
     const label2 = createLabel()
+    const label3 = createLabel()
+    const label4 = createLabel()
 
     op.push(OpCode.Jump)
     op.push(label2)
@@ -508,16 +511,26 @@ export function gen(code: string): [(OpCode | OpValue)[], ConstantValue[]] {
     updateLabel(label1)
     func.parameters.forEach(visitor)
 
+    op.push(OpCode.Jump)
+    op.push(label3)
+
     lexerContext.push({
       func,
       upValue: new Set(),
       locals: []
     })
+    updateLabel(label4)
 
     body.statements.forEach(visitor)
-    op.push(OpCode.Undefined)
+    op.push(OpCode.GeneratorReturn)
+
+    updateLabel(label3)
+
+    op.push(OpCode.CreateGeneratorContext)
+    op.push(label4)
 
     op.push(OpCode.Ret)
+
     updateLabel(label2)
 
     const context = lexerContext.pop()!
@@ -545,7 +558,7 @@ export function gen(code: string): [(OpCode | OpValue)[], ConstantValue[]] {
       }
       throw new Error('generator support func declaration only')
     }
-    
+
     const body = func.body
     if (!body) {
       throw new Error('function must have body')

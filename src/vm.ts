@@ -1,5 +1,5 @@
 import { OpCode, OpValue } from './opcode'
-import { assertOPValue, assertNever, assertOPCode } from './utils'
+import { assertOPValue, assertNever, assertOPCode, assertDef } from './utils'
 import {
   VMDump,
   DoneResult,
@@ -33,7 +33,11 @@ import {
   ConstantValueType,
   JSValue,
   JSReference,
-  JSHeapValue
+  JSHeapValue,
+  JSGeneratorFunction,
+  JSNativeFunction,
+  JSBirdgeFunction,
+  GeneratorContext
 } from './value'
 import { init } from './bom'
 
@@ -740,7 +744,7 @@ export default class VirtualMachine implements Callable {
             upValues.push(this.popStack().asString().value)
           }
 
-          const func = new JSFunction(
+          const func = new JSGeneratorFunction(
             name.asString(),
             length.asNumber().value,
             pos.asNumber().value,
@@ -753,17 +757,81 @@ export default class VirtualMachine implements Callable {
           this.stack.push(ref)
 
           upValues.forEach(name => upValue.set(name, this.lookup(name)))
-          break;
+          break
+        }
+        case OpCode.CreateGeneratorContext: {
+          const pos = this.popCode()
+
+          const frame = this.frames[this.frames.length - 1]
+          const context = new GeneratorContext(
+            pos,
+            frame,
+            this.environments.slice(
+              this.environments.indexOf(frame.environments)
+            )
+          )
+          frame.generatorContext = context
+
+          const iter = new JSObject(
+            new Map([
+              [
+                'next',
+                new JSBirdgeFunction(new JSString('next'), obj => {
+                  context.ret = this.cur
+                  context.frame.entry = this.stack.length
+
+                  this.frames.push(context.frame)
+                  this.environments.push(...context.envs)
+
+                  this.stack.push(...context.stack)
+                  this.stack.push(obj || JSUndefined.instance)
+                  this.cur = context.pos
+                  return
+                })
+              ]
+            ])
+          )
+          this.stack.push(iter)
+          break
         }
 
         case OpCode.Yield: {
-          // const pos = this.popCode()
-          // const value = this.popStack()
-          // this.stack.push(new )
+          const value = this.popStack()
+
+          const frame = this.frames.pop()!
+          const context = assertDef(frame.generatorContext)
+          context.stack = this.stack.slice(frame.entry)
+          this.stack = this.stack.slice(0, frame.entry)
+          this.environments = this.environments.slice(
+            0,
+            this.environments.indexOf(frame.environments)
+          )
+
+          context.pos = this.cur
+          this.stack.push(this.generatorResult(value, context.done))
+          this.cur = context.ret
           break
         }
 
         case OpCode.YieldStar: {
+          break
+        }
+
+        case OpCode.GeneratorReturn: {
+          const value = this.popStack()
+
+          const frame = this.frames.pop()!
+          const context = assertDef(frame.generatorContext)
+          this.stack = this.stack.slice(0, frame.entry)
+          this.environments = this.environments.slice(
+            0,
+            this.environments.indexOf(frame.environments)
+          )
+
+          context.pos = this.cur
+          context.done = true
+          this.stack.push(this.generatorResult(value, context.done))
+          this.cur = context.ret
           break
         }
 
@@ -955,7 +1023,8 @@ export default class VirtualMachine implements Callable {
         type: EnvironmentType.lexer,
         valueTable: new Map(),
         upValue: callee.upvalue
-      }
+      },
+      generatorContext: undefined
     }
 
     this.frames.push(stackFrame)
@@ -1049,5 +1118,11 @@ export default class VirtualMachine implements Callable {
     } else {
       this.stack.push(JSBoolean.True)
     }
+  }
+
+  generatorResult(value: VObject, done: boolean) {
+    return new JSObject(
+      new Map([['value', value], ['done', new JSBoolean(done)]])
+    )
   }
 }

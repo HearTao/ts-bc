@@ -577,6 +577,23 @@ test(`should work with split and join`, () => {
   run(code)
 })
 
+test(`should work with generator`, () => {
+  const code = `
+    function * foo(a) {
+      yield a + 1
+      yield a + 2
+      yield (1 + (yield a + 3))
+      return 42
+    }
+    var iter = foo(4)
+    iter.next()
+    iter.next()
+    iter.next()
+    ;[iter.next(5), iter.next()]
+  `
+  run(code)
+})
+
 test(`should work with step exec`, () => {
   const code = '0 ? 2 : 0 ? 3 : 4'
   stepRun(code)

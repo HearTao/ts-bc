@@ -1,5 +1,5 @@
-import { assertDef } from './utils'
-import { JSPropertyDescriptor } from './types'
+import { assertDef, fromEntries } from './utils'
+import { JSPropertyDescriptor, StackFrame, Environment } from './types'
 
 export enum ConstantValueType {
   string,
@@ -208,6 +208,14 @@ export class JSObject extends JSHeapValue {
 
   asArray(): JSArray {
     throw new Error('invalid cast')
+  }
+
+  debugValue() {
+    return fromEntries(
+      Array.from(this.properties.entries())
+        .filter(x => x[1].enumerable)
+        .map(([key, value]) => [key, value.value!.debugValue()])
+    )
   }
 }
 
@@ -456,8 +464,16 @@ export class JSLValue extends VObject {
   }
 }
 
-export class YieldContext extends VObject {
-  constructor(public pos: number) {
+export class GeneratorContext extends VObject {
+  public ret: number = 0
+  public done: boolean = false
+  public stack: VObject[] = []
+
+  constructor(
+    public pos: number,
+    public frame: StackFrame,
+    public envs: Environment[]
+  ) {
     super()
   }
 

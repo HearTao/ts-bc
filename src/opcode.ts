@@ -60,8 +60,10 @@ export enum OpCode {
   Call,
   CallMethod,
 
+  CreateGeneratorContext,
   Yield,
   YieldStar,
+  GeneratorReturn,
 
   Null,
   Undefined,
