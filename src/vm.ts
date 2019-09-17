@@ -1,5 +1,5 @@
 import { OpCode, OpValue } from './opcode'
-import { assertOPValue, assertNever, assertOPCode } from './utils'
+import { assertOPValue, assertNever, assertOPCode, assertDef } from './utils'
 import {
   VMDump,
   DoneResult,
@@ -32,9 +32,12 @@ import {
   ConstantValue,
   ConstantValueType,
   JSValue,
-  JSPrimitive,
   JSReference,
-  JSHeapValue
+  JSHeapValue,
+  JSGeneratorFunction,
+  JSNativeFunction,
+  JSBirdgeFunction,
+  GeneratorContext
 } from './value'
 import { init } from './bom'
 
@@ -728,6 +731,127 @@ export default class VirtualMachine implements Callable {
           break
         }
 
+        case OpCode.CreateGenerator: {
+          const code = this.popStack()
+          const name = this.popStack()
+          const length = this.popStack()
+          const pos = this.popStack()
+          const upValueCount = this.popStack()
+          const upValues: string[] = []
+          const upValue: Map<string, VObject> = new Map()
+
+          for (let i = 0; i < upValueCount.asNumber().value; ++i) {
+            upValues.push(this.popStack().asString().value)
+          }
+
+          const func = new JSGeneratorFunction(
+            name.asString(),
+            length.asNumber().value,
+            pos.asNumber().value,
+            upValue,
+            code.asString().value
+          )
+          const ref = new JSReference(this.heap.length)
+          this.heap.push(func)
+          this.define(name.asString().value, ref, EnvironmentType.lexer)
+          this.stack.push(ref)
+
+          upValues.forEach(name => upValue.set(name, this.lookup(name)))
+          break
+        }
+        case OpCode.CreateGeneratorContext: {
+          const pos = this.popCode()
+
+          const frame = this.frames[this.frames.length - 1]
+          const context = new GeneratorContext(
+            pos,
+            frame,
+            this.environments.slice(
+              this.environments.indexOf(frame.environments)
+            )
+          )
+          frame.generatorContext = context
+
+          const iter = new JSObject(
+            new Map([
+              [
+                'next',
+                new JSBirdgeFunction(new JSString('next'), obj => {
+                  if (context.done) {
+                    this.stack.push(
+                      this.generatorResult(JSUndefined.instance, true)
+                    )
+                    return
+                  }
+
+                  context.ret = this.cur
+                  context.frame.entry = this.stack.length
+
+                  this.frames.push(context.frame)
+                  this.environments.push(...context.envs)
+
+                  this.stack.push(...context.stack)
+                  this.stack.push(obj || JSUndefined.instance)
+                  this.cur = context.pos
+                  return
+                })
+              ],
+              [
+                'return',
+                new JSBirdgeFunction(new JSString('return'), obj => {
+                  context.done = true
+                  this.stack.push(
+                    this.generatorResult(obj || JSUndefined.instance, true)
+                  )
+                  return
+                })
+              ]
+            ])
+          )
+          this.stack.push(iter)
+          break
+        }
+
+        case OpCode.Yield: {
+          const value = this.popStack()
+
+          const frame = this.frames.pop()!
+          const context = assertDef(frame.generatorContext)
+          context.stack = this.stack.slice(frame.entry)
+          this.stack = this.stack.slice(0, frame.entry)
+          this.environments = this.environments.slice(
+            0,
+            this.environments.indexOf(frame.environments)
+          )
+
+          context.pos = this.cur
+          this.stack.push(this.generatorResult(value, context.done))
+          this.cur = context.ret
+          break
+        }
+
+        case OpCode.YieldStar: {
+          break
+        }
+
+        case OpCode.GeneratorReturn: {
+          const value = this.popStack()
+
+          const frame = this.frames.pop()!
+          const context = assertDef(frame.generatorContext)
+          this.stack = this.stack.slice(0, frame.entry)
+          this.environments = this.environments.slice(
+            0,
+            this.environments.indexOf(frame.environments)
+          )
+
+          context.pos = this.cur
+          context.done = true
+          this.stack.push(this.generatorResult(value, context.done))
+          this.cur = context.ret
+          break
+        }
+
         default:
           assertNever(op)
           break
@@ -916,7 +1040,8 @@ export default class VirtualMachine implements Callable {
         type: EnvironmentType.lexer,
         valueTable: new Map(),
         upValue: callee.upvalue
-      }
+      },
+      generatorContext: undefined
     }
 
     this.frames.push(stackFrame)
@@ -1010,5 +1135,11 @@ export default class VirtualMachine implements Callable {
     } else {
       this.stack.push(JSBoolean.True)
     }
+  }
+
+  generatorResult(value: VObject, done: boolean) {
+    return new JSObject(
+      new Map([['value', value], ['done', new JSBoolean(done)]])
+    )
   }
 }

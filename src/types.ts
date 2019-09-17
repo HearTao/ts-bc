@@ -1,6 +1,12 @@
 import * as ts from 'typescript'
 import { OpCode, OpValue } from './opcode'
-import { VObject, JSUndefined, JSFunction, ConstantValue } from './value'
+import {
+  VObject,
+  JSUndefined,
+  JSFunction,
+  ConstantValue,
+  GeneratorContext
+} from './value'
 
 export interface VMDump {
   stack: VObject[]
@@ -81,6 +87,7 @@ export interface StackFrame {
   entry: number
   environments: LexerEnvironment | GlobalEnvironment
   thisObject: VObject | JSUndefined
+  generatorContext: GeneratorContext | undefined
 }
 
 export class JSPropertyDescriptor {

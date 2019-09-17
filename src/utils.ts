@@ -41,3 +41,22 @@ export function findRight<T, U extends T>(
   }
   return undefined
 }
+
+export function last<T>(items: T[]): T {
+  if (!items.length) {
+    throw new Error('out of range')
+  }
+  return items[items.length - 1]
+}
+
+export function fromEntries<K extends keyof any, V>(
+  arr: [K, V][]
+): Record<K, V> {
+  return arr.reduce(
+    (prev, [k, v]) => {
+      prev[k] = v
+      return prev
+    },
+    {} as Record<K, V>
+  )
+}

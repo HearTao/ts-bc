@@ -1,29 +1,17 @@
 import VirtualMachine, { gen, JSString, VObject } from '../src'
 
 const code = `
-function fooo () {
-  function foo() {
-    var a = 0;
-    var obj = {}
-    function bar () {
-      a += 1;
-      obj.a = 1;
-      for (let i = 0; i < 10; ++i) {
-        let c = {}
-        c.c = c
-        c.d = {}
-      }
-      return a;
-    }
-    return bar;
-  }
-  var b = foo();
-  b();
-  b()
-  print("gc count", gc())
+function * foo(a) {
+  yield a + 1
+  yield a + 2
+  yield (1 + (yield a + 3))
+  return 42
 }
-fooo()
-print("gc count", gc())
+var iter = foo(4)
+iter.next()
+iter.next()
+iter.next()
+;[iter.next(5), iter.next()]
 `
 const [op, value] = gen(code)
 

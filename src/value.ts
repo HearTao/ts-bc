@@ -1,5 +1,5 @@
-import { assertDef } from './utils'
-import { JSPropertyDescriptor } from './types'
+import { assertDef, fromEntries } from './utils'
+import { JSPropertyDescriptor, StackFrame, Environment } from './types'
 
 export enum ConstantValueType {
   string,
@@ -209,6 +209,14 @@ export class JSObject extends JSHeapValue {
   asArray(): JSArray {
     throw new Error('invalid cast')
   }
+
+  debugValue() {
+    return fromEntries(
+      Array.from(this.properties.entries())
+        .filter(x => x[1].enumerable)
+        .map(([key, value]) => [key, value.value!.debugValue()])
+    )
+  }
 }
 
 export abstract class JSPrimitive extends JSValue {
@@ -307,12 +315,32 @@ export class JSFunction extends JSObject {
     return true
   }
 
+  isGenerator(): this is JSGeneratorFunction {
+    return false
+  }
+
   isBridge(): this is JSBirdgeFunction {
     return false
   }
 
   isLambda(): this is JSLambda {
     return false
+  }
+}
+
+export class JSGeneratorFunction extends JSFunction {
+  constructor(
+    name: JSString = JSString.Empty,
+    length: number = -1,
+    pos: number = -1,
+    upvalue: Map<string, VObject> = new Map(),
+    text: string = ''
+  ) {
+    super(name, length, pos, upvalue, text)
+  }
+
+  isGenerator(): this is JSGeneratorFunction {
+    return true
   }
 }
 
@@ -428,6 +456,24 @@ export type LValueInfo = LValueInfoIdentifier | LValueInfoPropertyAccess
 
 export class JSLValue extends VObject {
   constructor(public info: LValueInfo) {
+    super()
+  }
+
+  debugValue(): any {
+    return this
+  }
+}
+
+export class GeneratorContext extends VObject {
+  public ret: number = 0
+  public done: boolean = false
+  public stack: VObject[] = []
+
+  constructor(
+    public pos: number,
+    public frame: StackFrame,
+    public envs: Environment[]
+  ) {
     super()
   }
 
