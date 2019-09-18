@@ -1,5 +1,11 @@
 import { OpCode, OpValue } from './opcode'
-import { assertOPValue, assertNever, assertOPCode, assertDef } from './utils'
+import {
+  assertOPValue,
+  assertNever,
+  assertOPCode,
+  assertDef,
+  last
+} from './utils'
 import {
   VMDump,
   DoneResult,
@@ -350,6 +356,17 @@ export default class VirtualMachine implements Callable {
             kind: BlockEnvironmentKind.iterable,
             valueTable: new Map(),
             end
+          })
+          break
+        }
+
+        case OpCode.EnterTryBlockScope: {
+          const catchPos = this.popCode()
+          this.environments.push({
+            type: EnvironmentType.block,
+            kind: BlockEnvironmentKind.try,
+            valueTable: new Map(),
+            catchPos
           })
           break
         }
@@ -849,6 +866,27 @@ export default class VirtualMachine implements Callable {
           context.done = true
           this.stack.push(this.generatorResult(value, context.done))
           this.cur = context.ret
+          break
+        }
+
+        case OpCode.Throw: {
+          const value = this.popStack()
+          while (true) {
+            const env = last(this.environments)
+            if (env.type === EnvironmentType.global) {
+              throw new Error('Uncaught error: ' + value)
+            } else if (env.type === EnvironmentType.lexer) {
+              this.frames.pop()
+              this.environments.pop()
+            } else {
+              this.environments.pop()
+              if (env.kind === BlockEnvironmentKind.try) {
+                this.stack.push(value)
+                this.cur = env.catchPos
+                break
+              }
+            }
+          }
           break
         }
 
