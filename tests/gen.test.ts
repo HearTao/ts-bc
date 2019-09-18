@@ -609,6 +609,45 @@ test(`should work with generator return`, () => {
   run(code)
 })
 
+test(`should work with throw`, () => {
+  const code = `
+    function foo (a) {
+      try {
+        let b = a + 1
+        throw b - 2
+        return 0
+      } catch (e) {
+        return e + 1
+      }
+    }
+    foo(42)
+  `
+  run(code)
+})
+
+test(`should work with re-throw`, () => {
+  const code = `
+    function foo (a) {
+      try {
+        let b = a + 1
+        throw b - 2
+        return 0
+      } catch (e) {
+        throw e + 1
+        return 0
+      }
+    }
+    let i = -1
+    try {
+      foo(42)
+    } catch (e) {
+      i = -22
+    }
+    i
+  `
+  run(code)
+})
+
 test(`should work with step exec`, () => {
   const code = '0 ? 2 : 0 ? 3 : 4'
   stepRun(code)

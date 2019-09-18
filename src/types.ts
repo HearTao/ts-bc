@@ -48,7 +48,8 @@ export interface LexerEnvironment {
 export enum BlockEnvironmentKind {
   normal,
   labeled,
-  iterable
+  iterable,
+  try
 }
 
 export interface BaseBlockEnvironment {
@@ -72,10 +73,16 @@ export interface IterableBlockEnviroment extends BaseBlockEnvironment {
   end: number
 }
 
+export interface TryBlockEnviroment extends BaseBlockEnvironment {
+  kind: BlockEnvironmentKind.try
+  catchPos: number
+}
+
 export type BlockEnvironment =
-  | BaseBlockEnvironment
+  | NormalBlockEnvironment
   | LabeledBlockEnvironment
   | IterableBlockEnviroment
+  | TryBlockEnviroment
 
 export type Environment =
   | LexerEnvironment

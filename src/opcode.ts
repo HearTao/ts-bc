@@ -51,6 +51,7 @@ export enum OpCode {
   EnterBlockScope,
   EnterLabeledBlockScope,
   EnterIterableBlockScope,
+  EnterTryBlockScope,
   ExitBlockScope,
 
   Break,
@@ -64,6 +65,8 @@ export enum OpCode {
   Yield,
   YieldStar,
   GeneratorReturn,
+
+  Throw,
 
   Null,
   Undefined,

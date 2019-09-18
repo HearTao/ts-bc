@@ -3,6 +3,7 @@ import { OpCode, OpValue, Label } from './opcode'
 import { EnvironmentType, ObjectMemberType, LexerContext } from './types'
 import { ConstantValue, ConstantValueType } from './value'
 import createVHost from 'ts-ez-host'
+import { last } from './utils'
 
 export function gen(code: string): [(OpCode | OpValue)[], ConstantValue[]] {
   const op: (OpCode | OpValue)[] = []
@@ -122,6 +123,12 @@ export function gen(code: string): [(OpCode | OpValue)[], ConstantValue[]] {
       case ts.SyntaxKind.YieldExpression:
         visitYieldExpression(<ts.YieldExpression>node)
         break
+      case ts.SyntaxKind.TryStatement:
+        visitTryStatement(<ts.TryStatement>node)
+        break
+      case ts.SyntaxKind.ThrowStatement:
+        visitThrowStatement(<ts.ThrowStatement>node)
+        break
       default:
         ts.forEachChild(node, visitor)
     }
@@ -168,6 +175,45 @@ export function gen(code: string): [(OpCode | OpValue)[], ConstantValue[]] {
       visitor(expr.expression)
     }
     op.push(OpCode.Yield)
+  }
+
+  function visitThrowStatement(stmt: ts.ThrowStatement) {
+    if (!stmt.expression) {
+      op.push(OpCode.Undefined)
+    } else {
+      visitor(stmt.expression)
+    }
+    op.push(OpCode.Throw)
+  }
+
+  function visitCatchClause(clause: ts.CatchClause) {
+    op.push(OpCode.EnterBlockScope)
+
+    pushConst((clause.variableDeclaration!.name as ts.Identifier).text)
+    op.push(OpCode.DefBlock)
+
+    visitor(clause.block)
+    op.push(OpCode.ExitBlockScope)
+  }
+
+  function visitTryStatement(stmt: ts.TryStatement) {
+    const label1 = createLabel()
+    const label2 = createLabel()
+
+    op.push(OpCode.EnterTryBlockScope)
+    op.push(label2)
+
+    visitor(stmt.tryBlock)
+
+    op.push(OpCode.ExitBlockScope)
+
+    op.push(OpCode.Jump)
+    op.push(label1)
+
+    updateLabel(label2)
+    visitCatchClause(stmt.catchClause!)
+
+    updateLabel(label1)
   }
 
   function visitInBlockScope<T extends ts.Node>(stmt: T, cb: () => void) {
@@ -630,14 +676,15 @@ export function gen(code: string): [(OpCode | OpValue)[], ConstantValue[]] {
     op.push(OpCode.Load)
 
     if (lexerContext.length) {
-      const context = lexerContext[lexerContext.length - 1]
-      if (ts.isArrowFunction(context.func) || id.text !== 'arguments') {
-        if (
-          !context.func.locals!.has(id.text as ts.__String) &&
-          !context.locals.some(locale => locale.has(id.text as ts.__String))
-        ) {
-          context.upValue.add(id.text)
-        }
+      const context = last(lexerContext)
+      const symbol = checker.getSymbolAtLocation(id)
+      if (
+        symbol &&
+        symbol.valueDeclaration &&
+        (symbol.valueDeclaration.pos < context.func.pos ||
+          context.func.pos >= symbol.valueDeclaration.end)
+      ) {
+        context.upValue.add(id.text)
       }
     }
   }
