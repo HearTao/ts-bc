@@ -936,9 +936,11 @@ export default class VirtualMachine implements Callable {
 
     switch (op) {
       case OpCode.Add: {
-        this.stack.push(
-          new JSNumber(left.asNumber().value + right.asNumber().value)
-        )
+        const value =
+          right.isString() || left.isString()
+            ? new JSString(left.asString().value + right.asString().value)
+            : new JSNumber(left.asNumber().value + right.asNumber().value)
+        this.stack.push(value)
         break
       }
       case OpCode.Sub: {

@@ -671,3 +671,22 @@ test(`should work with dump and load`, () => {
 
   expect(result.value.debugValue()).toBe(eval(code))
 })
+
+test(`should work with casting primitives`, () => {
+  const code = "1 + '1'"
+
+  run(code)
+})
+
+test(`should work with template expression`, () => {
+  const code =
+    "const a = 'a'; function getC() { return 'c' }; const str = `${a} b ${getC()} d ${42}`; str"
+
+  run(code)
+})
+
+test(`should work with template literal`, () => {
+  const code = 'const a = `AAA`; a'
+
+  run(code)
+})

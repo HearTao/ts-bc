@@ -35,6 +35,7 @@ export function gen(code: string): [(OpCode | OpValue)[], ConstantValue[]] {
       case ts.SyntaxKind.NumericLiteral:
         visitNumericLiteral(<ts.NumericLiteral>node)
         break
+      case ts.SyntaxKind.NoSubstitutionTemplateLiteral:
       case ts.SyntaxKind.StringLiteral:
         visitStringLiteral(<ts.StringLiteral>node)
         break
@@ -128,6 +129,9 @@ export function gen(code: string): [(OpCode | OpValue)[], ConstantValue[]] {
         break
       case ts.SyntaxKind.ThrowStatement:
         visitThrowStatement(<ts.ThrowStatement>node)
+        break
+      case ts.SyntaxKind.TemplateExpression:
+        visitTemplateExpression(<ts.TemplateExpression>node)
         break
       default:
         ts.forEachChild(node, visitor)
@@ -953,5 +957,30 @@ export function gen(code: string): [(OpCode | OpValue)[], ConstantValue[]] {
 
     visitor(cond.whenFalse)
     updateLabel(label1)
+  }
+
+  function visitTemplateExpression(templateExpression: ts.TemplateExpression) {
+    // Transform `A ${1} b ${2} c` to ["A ", 1, " b ", 2, " c"].join("")
+
+    pushConst('')
+
+    op.push(OpCode.Push)
+    op.push({ value: 1 })
+
+    pushConst(templateExpression.head.text)
+
+    templateExpression.templateSpans.forEach(templateSpan => {
+      visitor(templateSpan.expression)
+      pushConst(templateSpan.literal.text)
+    })
+
+    // one head plus expression and literal for each template expression
+    const len = 1 + 2 * templateExpression.templateSpans.length
+    op.push(OpCode.CreateArray)
+    op.push({ value: len })
+
+    pushConst('join')
+
+    op.push(OpCode.CallMethod)
   }
 }

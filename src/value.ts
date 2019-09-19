@@ -74,13 +74,19 @@ export abstract class VObject {
     if (this.isNumber()) {
       return this
     }
-    throw new Error('invalid cast')
+
+    return new JSNumber(+this)
   }
 
   asString() {
     if (this.isString()) {
       return this
     }
+
+    if (this.isNumber()) {
+      return new JSString(this.value.toString())
+    }
+
     throw new Error('invalid cast')
   }
 

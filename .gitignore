@@ -67,3 +67,5 @@ dist/
 .vscode/
 
 typescript.js
+
+.idea/
