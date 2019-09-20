@@ -14,7 +14,9 @@
     "test": "jest --testPathIgnorePatterns browser --testPathIgnorePatterns libs --testPathIgnorePatterns dist",
     "test:browser": "npm run build:browser && jest",
     "test:cases": "npm run build:cases && node ./dist/tests/cases.js",
-    "prettier": "prettier --config ./prettier.json --write ./types/**/* ./src/* ./src/**/* ./tests/**/*"
+    "prettier": "prettier --config ./prettier.json --write ./types/**/* ./src/* ./src/**/* ./tests/**/*",
+    "prettier-check": "prettier --config ./prettier.json --check ./types/**/* ./src/* ./src/**/* ./tests/**/*",
+    "lint": "eslint \"src/**/*.ts\" \"tests/*.ts\" --fix"
   },
   "repository": {
     "type": "git",
@@ -40,6 +42,11 @@
     "@types/node": "^12.7.2",
     "@types/puppeteer": "^1.19.1",
     "@types/webpack": "^4.39.1",
+    "@typescript-eslint/eslint-plugin": "^2.3.0",
+    "@typescript-eslint/parser": "^2.3.0",
+    "eslint": "^6.4.0",
+    "eslint-config-prettier": "^6.3.0",
+    "eslint-plugin-prettier": "^3.1.1",
     "jest": "^24.9.0",
     "prettier": "^1.18.2",
     "puppeteer": "^1.19.0",

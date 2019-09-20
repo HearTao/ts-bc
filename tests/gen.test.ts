@@ -2,14 +2,14 @@ import VirtualMachine from '../src/vm'
 import { gen } from '../src/gen'
 import { ExecResult } from '../src/types'
 
-function run(code: string) {
+function run(code: string): void {
   const [op, value] = gen(code)
   const vm = new VirtualMachine(op, value)
 
   expect(vm.exec().value.debugValue()).toStrictEqual(eval(code))
 }
 
-function runUnorder(code: string) {
+function runUnorder(code: string): void {
   const [op, value] = gen(code)
   const vm = new VirtualMachine(op, value)
 
@@ -21,7 +21,7 @@ function runUnorder(code: string) {
   ).toStrictEqual(eval(code).sort())
 }
 
-function stepRun(code: string) {
+function stepRun(code: string): void {
   const [op, value] = gen(code)
   const vm = new VirtualMachine(op, value)
 

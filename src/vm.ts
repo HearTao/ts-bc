@@ -41,8 +41,7 @@ import {
   JSReference,
   JSHeapValue,
   JSGeneratorFunction,
-  JSNativeFunction,
-  JSBirdgeFunction,
+  JSBridgeFunction,
   GeneratorContext
 } from './value'
 import { init } from './bom'
@@ -65,7 +64,7 @@ export default class VirtualMachine implements Callable {
     }
   }
 
-  private initGlobal() {
+  private initGlobal(): Map<string, VObject> {
     const valueTable: Map<string, VObject> = new Map()
     this.environments.push({
       type: EnvironmentType.global,
@@ -76,7 +75,7 @@ export default class VirtualMachine implements Callable {
     return valueTable
   }
 
-  private popStack(deRef: boolean = true) {
+  private popStack(deRef = true): VObject {
     const value = this.stack.pop()
     if (!value) {
       throw new Error('no value')
@@ -87,13 +86,13 @@ export default class VirtualMachine implements Callable {
     return value
   }
 
-  private popCode() {
+  private popCode(): number {
     const code = this.codes[this.cur++]
     if (!code) throw new Error('no code')
     return assertOPValue(code)
   }
 
-  private lookup(name: string) {
+  private lookup(name: string): VObject {
     for (let i = this.environments.length - 1; i >= 0; i--) {
       const env = this.environments[i]
       if (env.valueTable.has(name)) {
@@ -108,7 +107,7 @@ export default class VirtualMachine implements Callable {
     throw new Error('cannot find name ' + name)
   }
 
-  private define(name: string, value: VObject, type: EnvironmentType) {
+  private define(name: string, value: VObject, type: EnvironmentType): void {
     for (let i = this.environments.length - 1; i >= 0; i--) {
       const env = this.environments[i]
       if (
@@ -122,7 +121,7 @@ export default class VirtualMachine implements Callable {
     }
   }
 
-  private setValue(name: string, value: VObject) {
+  private setValue(name: string, value: VObject): void {
     for (let i = this.environments.length - 1; i >= 0; i--) {
       const env = this.environments[i]
       if (env.valueTable.has(name)) {
@@ -139,7 +138,7 @@ export default class VirtualMachine implements Callable {
     throw new Error('cannot find name ' + name)
   }
 
-  private constantToValue(constant: ConstantValue) {
+  private constantToValue(constant: ConstantValue): JSValue {
     switch (constant.type) {
       case ConstantValueType.string:
         return new JSString(constant.value)
@@ -161,7 +160,7 @@ export default class VirtualMachine implements Callable {
     }
   }
 
-  load(dump: VMDump) {
+  load(dump: VMDump): void {
     this.stack = dump.stack
     this.frames = dump.frames
     this.environments = dump.environments
@@ -174,9 +173,9 @@ export default class VirtualMachine implements Callable {
     return this.exec()
   }
 
-  gc() {
+  gc(): number {
     const seen = new Set<VObject>()
-    const visitValue = (value: VObject) => {
+    const visitValue = (value: VObject): void => {
       if (seen.has(value)) {
         return
       } else {
@@ -248,7 +247,6 @@ export default class VirtualMachine implements Callable {
         case OpCode.Div:
         case OpCode.Pow:
         case OpCode.Mod:
-
         case OpCode.BitwiseAnd:
         case OpCode.BitwiseOr:
         case OpCode.BitwiseXor:
@@ -265,11 +263,9 @@ export default class VirtualMachine implements Callable {
         case OpCode.StrictNEQ:
           this.binaryOp(op)
           break
-
         case OpCode.PrefixPlus:
         case OpCode.PrefixMinus:
         case OpCode.BitwiseNot:
-
         case OpCode.LogicalNot:
           this.unaryOp(op)
           break
@@ -372,7 +368,7 @@ export default class VirtualMachine implements Callable {
         }
 
         case OpCode.ExitBlockScope: {
-          const top = this.environments.pop()!
+          this.environments.pop()
           break
         }
 
@@ -793,7 +789,7 @@ export default class VirtualMachine implements Callable {
             new Map([
               [
                 'next',
-                new JSBirdgeFunction(new JSString('next'), obj => {
+                new JSBridgeFunction(new JSString('next'), (obj): void => {
                   if (context.done) {
                     this.stack.push(
                       this.generatorResult(JSUndefined.instance, true)
@@ -815,7 +811,7 @@ export default class VirtualMachine implements Callable {
               ],
               [
                 'return',
-                new JSBirdgeFunction(new JSString('return'), obj => {
+                new JSBridgeFunction(new JSString('return'), (obj): void => {
                   context.done = true
                   this.stack.push(
                     this.generatorResult(obj || JSUndefined.instance, true)
@@ -908,7 +904,7 @@ export default class VirtualMachine implements Callable {
     }
   }
 
-  unaryOp(op: OpCode) {
+  unaryOp(op: OpCode): void {
     const operand = this.popStack()
     switch (op) {
       case OpCode.PrefixPlus: {
@@ -930,7 +926,7 @@ export default class VirtualMachine implements Callable {
     }
   }
 
-  binaryOp(op: OpCode) {
+  binaryOp(op: OpCode): void {
     const right = this.popStack()
     const left = this.popStack()
 
@@ -1059,7 +1055,7 @@ export default class VirtualMachine implements Callable {
     }
   }
 
-  call(callee: JSFunction, args: VObject[], thisObject: VObject) {
+  call(callee: JSFunction, args: VObject[], thisObject: VObject): void {
     if (callee.isBridge()) {
       if (callee.isNative()) {
         this.stack.push(callee.apply(thisObject, args.reverse()))
@@ -1113,7 +1109,7 @@ export default class VirtualMachine implements Callable {
     return false
   }
 
-  getProp(obj: JSValue, curr: JSValue, key: JSString | JSNumber) {
+  getProp(obj: JSValue, curr: JSValue, key: JSString | JSNumber): void {
     if (key.isNumber() && (obj.isString() || obj.isArray())) {
       if (this.getPropIndexAccess(obj, key)) {
         return
@@ -1135,7 +1131,7 @@ export default class VirtualMachine implements Callable {
     this.stack.push(JSUndefined.instance)
   }
 
-  getValueByDescriptor(obj: JSValue, descriptor: JSPropertyDescriptor) {
+  getValueByDescriptor(obj: JSValue, descriptor: JSPropertyDescriptor): void {
     if (descriptor.getter) {
       this.call(descriptor.getter, [], obj)
     } else {
@@ -1143,7 +1139,7 @@ export default class VirtualMachine implements Callable {
     }
   }
 
-  forInNext(iter: JSForInOrOfIterator) {
+  forInNext(iter: JSForInOrOfIterator): void {
     const keys = Array.from(iter.target.properties.entries())
       .filter(([_, value]) => !!value.enumerable)
       .map(([key]) => new JSString(key.toString()))
@@ -1155,7 +1151,7 @@ export default class VirtualMachine implements Callable {
     }
   }
 
-  forOfNext(iter: JSForInOrOfIterator) {
+  forOfNext(iter: JSForInOrOfIterator): void {
     if (iter.target.isString()) {
       const values = iter.target.value.split('')
       if (iter.curr < values.length) {
@@ -1177,7 +1173,7 @@ export default class VirtualMachine implements Callable {
     }
   }
 
-  generatorResult(value: VObject, done: boolean) {
+  generatorResult(value: VObject, done: boolean): JSObject {
     return new JSObject(
       new Map([['value', value], ['done', new JSBoolean(done)]])
     )

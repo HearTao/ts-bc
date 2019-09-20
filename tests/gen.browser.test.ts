@@ -27,7 +27,7 @@ afterAll(async () => {
   await browser.close()
 })
 
-async function run(code: string) {
+async function run(code: string): Promise<any> {
   if (!page) throw 42
   const wrap = `\
 ;(() => {

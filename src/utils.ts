@@ -14,7 +14,7 @@ export function assertOPCode(v: OpCode | OpValue): OpCode {
   return v
 }
 
-export function assertNever(v: never): never {
+export function assertNever(_v: never): never {
   return undefined!
 }
 

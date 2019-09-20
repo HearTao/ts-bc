@@ -30,108 +30,108 @@ export function gen(code: string): [(OpCode | OpValue)[], ConstantValue[]] {
 
   return [op, constants]
 
-  function visitor(node: ts.Node) {
+  function visitor(node: ts.Node): void {
     switch (node.kind) {
       case ts.SyntaxKind.NumericLiteral:
-        visitNumericLiteral(<ts.NumericLiteral>node)
+        visitNumericLiteral(node as ts.NumericLiteral)
         break
       case ts.SyntaxKind.NoSubstitutionTemplateLiteral:
       case ts.SyntaxKind.StringLiteral:
-        visitStringLiteral(<ts.StringLiteral>node)
+        visitStringLiteral(node as ts.StringLiteral)
         break
       case ts.SyntaxKind.BinaryExpression:
-        visitBinaryExpression(<ts.BinaryExpression>node)
+        visitBinaryExpression(node as ts.BinaryExpression)
         break
       case ts.SyntaxKind.ParenthesizedExpression:
-        visitor((<ts.ParenthesizedExpression>node).expression)
+        visitor((node as ts.ParenthesizedExpression).expression)
         break
       case ts.SyntaxKind.ConditionalExpression:
-        visitConditionalExpression(<ts.ConditionalExpression>node)
+        visitConditionalExpression(node as ts.ConditionalExpression)
         break
       case ts.SyntaxKind.PrefixUnaryExpression:
-        visitPrefixUnaryExpression(<ts.PrefixUnaryExpression>node)
+        visitPrefixUnaryExpression(node as ts.PrefixUnaryExpression)
         break
       case ts.SyntaxKind.PostfixUnaryExpression:
-        visitPostfixUnaryExpression(<ts.PostfixUnaryExpression>node)
+        visitPostfixUnaryExpression(node as ts.PostfixUnaryExpression)
         break
       case ts.SyntaxKind.VariableDeclarationList:
-        visitVariableDeclarationList(<ts.VariableDeclarationList>node)
+        visitVariableDeclarationList(node as ts.VariableDeclarationList)
         break
       case ts.SyntaxKind.WhileStatement:
-        visitWhileStatement(<ts.WhileStatement>node)
+        visitWhileStatement(node as ts.WhileStatement)
         break
       case ts.SyntaxKind.ForStatement:
-        visitForStatement(<ts.ForStatement>node)
+        visitForStatement(node as ts.ForStatement)
         break
       case ts.SyntaxKind.ForInStatement:
       case ts.SyntaxKind.ForOfStatement:
-        visitForInOrOfStatement(<ts.ForInStatement>node)
+        visitForInOrOfStatement(node as ts.ForInStatement)
         break
       case ts.SyntaxKind.IfStatement:
-        visitIfStatement(<ts.IfStatement>node)
+        visitIfStatement(node as ts.IfStatement)
         break
       case ts.SyntaxKind.Identifier:
-        visitIdentifier(<ts.Identifier>node)
+        visitIdentifier(node as ts.Identifier)
         break
       case ts.SyntaxKind.Block:
-        visitBlock(<ts.Block>node)
+        visitBlock(node as ts.Block)
         break
       case ts.SyntaxKind.FunctionDeclaration:
       case ts.SyntaxKind.FunctionExpression:
       case ts.SyntaxKind.ArrowFunction:
-        visitFunctionLikeDeclaration(<ts.FunctionLikeDeclaration>node)
+        visitFunctionLikeDeclaration(node as ts.FunctionLikeDeclaration)
         break
       case ts.SyntaxKind.CallExpression:
-        visitCallExpression(<ts.CallExpression>node)
+        visitCallExpression(node as ts.CallExpression)
         break
       case ts.SyntaxKind.ReturnStatement:
-        visitReturnStatement(<ts.ReturnStatement>node)
+        visitReturnStatement(node as ts.ReturnStatement)
         break
       case ts.SyntaxKind.Parameter:
-        visitParameter(<ts.ParameterDeclaration>node)
+        visitParameter(node as ts.ParameterDeclaration)
         break
       case ts.SyntaxKind.ElementAccessExpression:
-        visitElementAccessExpression(<ts.ElementAccessExpression>node)
+        visitElementAccessExpression(node as ts.ElementAccessExpression)
         break
       case ts.SyntaxKind.PropertyAccessExpression:
-        visitPropertyAccessExpression(<ts.PropertyAccessExpression>node)
+        visitPropertyAccessExpression(node as ts.PropertyAccessExpression)
         break
       case ts.SyntaxKind.ArrayLiteralExpression:
-        visitArrayLiteralExpression(<ts.ArrayLiteralExpression>node)
+        visitArrayLiteralExpression(node as ts.ArrayLiteralExpression)
         break
       case ts.SyntaxKind.ObjectLiteralExpression:
-        visitObjectLiteralExpression(<ts.ObjectLiteralExpression>node)
+        visitObjectLiteralExpression(node as ts.ObjectLiteralExpression)
         break
       case ts.SyntaxKind.ThisKeyword:
-        visitThisExpression(<ts.ThisExpression>node)
+        visitThisExpression(node as ts.ThisExpression)
         break
       case ts.SyntaxKind.NewExpression:
-        visitNewExpression(<ts.NewExpression>node)
+        visitNewExpression(node as ts.NewExpression)
         break
       case ts.SyntaxKind.SwitchStatement:
-        visitSwitchStatement(<ts.SwitchStatement>node)
+        visitSwitchStatement(node as ts.SwitchStatement)
         break
       case ts.SyntaxKind.BreakStatement:
-        visitBreakStatement(<ts.BreakStatement>node)
+        visitBreakStatement(node as ts.BreakStatement)
         break
       case ts.SyntaxKind.LabeledStatement:
-        visitLabeledStatement(<ts.LabeledStatement>node)
+        visitLabeledStatement(node as ts.LabeledStatement)
         break
       case ts.SyntaxKind.TrueKeyword:
       case ts.SyntaxKind.FalseKeyword:
-        visitBooleanLiteral(<ts.BooleanLiteral>node)
+        visitBooleanLiteral(node as ts.BooleanLiteral)
         break
       case ts.SyntaxKind.YieldExpression:
-        visitYieldExpression(<ts.YieldExpression>node)
+        visitYieldExpression(node as ts.YieldExpression)
         break
       case ts.SyntaxKind.TryStatement:
-        visitTryStatement(<ts.TryStatement>node)
+        visitTryStatement(node as ts.TryStatement)
         break
       case ts.SyntaxKind.ThrowStatement:
-        visitThrowStatement(<ts.ThrowStatement>node)
+        visitThrowStatement(node as ts.ThrowStatement)
         break
       case ts.SyntaxKind.TemplateExpression:
-        visitTemplateExpression(<ts.TemplateExpression>node)
+        visitTemplateExpression(node as ts.TemplateExpression)
         break
       default:
         ts.forEachChild(node, visitor)
@@ -142,11 +142,11 @@ export function gen(code: string): [(OpCode | OpValue)[], ConstantValue[]] {
     return { value: op.length }
   }
 
-  function updateLabel(l: Label) {
+  function updateLabel(l: Label): void {
     l.value = op.length
   }
 
-  function pushConst(value: string | number | boolean) {
+  function pushConst(value: string | number | boolean): void {
     switch (typeof value) {
       case 'string':
         constants.push({
@@ -172,7 +172,7 @@ export function gen(code: string): [(OpCode | OpValue)[], ConstantValue[]] {
     op.push({ value: constants.length - 1 })
   }
 
-  function visitYieldExpression(expr: ts.YieldExpression) {
+  function visitYieldExpression(expr: ts.YieldExpression): void {
     if (!expr.expression) {
       op.push(OpCode.Undefined)
     } else {
@@ -181,7 +181,7 @@ export function gen(code: string): [(OpCode | OpValue)[], ConstantValue[]] {
     op.push(OpCode.Yield)
   }
 
-  function visitThrowStatement(stmt: ts.ThrowStatement) {
+  function visitThrowStatement(stmt: ts.ThrowStatement): void {
     if (!stmt.expression) {
       op.push(OpCode.Undefined)
     } else {
@@ -190,7 +190,7 @@ export function gen(code: string): [(OpCode | OpValue)[], ConstantValue[]] {
     op.push(OpCode.Throw)
   }
 
-  function visitCatchClause(clause: ts.CatchClause) {
+  function visitCatchClause(clause: ts.CatchClause): void {
     op.push(OpCode.EnterBlockScope)
 
     pushConst((clause.variableDeclaration!.name as ts.Identifier).text)
@@ -200,7 +200,7 @@ export function gen(code: string): [(OpCode | OpValue)[], ConstantValue[]] {
     op.push(OpCode.ExitBlockScope)
   }
 
-  function visitTryStatement(stmt: ts.TryStatement) {
+  function visitTryStatement(stmt: ts.TryStatement): void {
     const label1 = createLabel()
     const label2 = createLabel()
 
@@ -220,7 +220,7 @@ export function gen(code: string): [(OpCode | OpValue)[], ConstantValue[]] {
     updateLabel(label1)
   }
 
-  function visitInBlockScope<T extends ts.Node>(stmt: T, cb: () => void) {
+  function visitInBlockScope<T extends ts.Node>(stmt: T, cb: () => void): void {
     if (stmt.locals && lexerContext.length) {
       lexerContext[lexerContext.length - 1].locals.push(stmt.locals)
     }
@@ -230,7 +230,7 @@ export function gen(code: string): [(OpCode | OpValue)[], ConstantValue[]] {
     }
   }
 
-  function visitBooleanLiteral(lit: ts.BooleanLiteral) {
+  function visitBooleanLiteral(lit: ts.BooleanLiteral): void {
     switch (lit.kind) {
       case ts.SyntaxKind.TrueKeyword:
         op.push(OpCode.True)
@@ -241,7 +241,7 @@ export function gen(code: string): [(OpCode | OpValue)[], ConstantValue[]] {
     }
   }
 
-  function visitIfStatement(stmt: ts.IfStatement) {
+  function visitIfStatement(stmt: ts.IfStatement): void {
     const label1 = createLabel()
     const label2 = createLabel()
 
@@ -251,7 +251,9 @@ export function gen(code: string): [(OpCode | OpValue)[], ConstantValue[]] {
     op.push(label2)
 
     op.push(OpCode.EnterBlockScope)
-    visitInBlockScope(stmt.thenStatement, () => visitor(stmt.thenStatement))
+    visitInBlockScope(stmt.thenStatement, (): void =>
+      visitor(stmt.thenStatement)
+    )
     op.push(OpCode.ExitBlockScope)
 
     op.push(OpCode.Jump)
@@ -261,13 +263,13 @@ export function gen(code: string): [(OpCode | OpValue)[], ConstantValue[]] {
     if (stmt.elseStatement) {
       const elseStatement = stmt.elseStatement
       op.push(OpCode.EnterBlockScope)
-      visitInBlockScope(elseStatement, () => visitor(elseStatement))
+      visitInBlockScope(elseStatement, (): void => visitor(elseStatement))
       op.push(OpCode.ExitBlockScope)
     }
     updateLabel(label1)
   }
 
-  function visitLabeledStatement(stmt: ts.LabeledStatement) {
+  function visitLabeledStatement(stmt: ts.LabeledStatement): void {
     const label1 = createLabel()
 
     pushConst(stmt.label.text)
@@ -275,12 +277,12 @@ export function gen(code: string): [(OpCode | OpValue)[], ConstantValue[]] {
     op.push(OpCode.EnterLabeledBlockScope)
     op.push(label1)
 
-    visitInBlockScope(stmt.statement, () => visitor(stmt.statement))
+    visitInBlockScope(stmt.statement, (): void => visitor(stmt.statement))
 
     updateLabel(label1)
   }
 
-  function visitBreakStatement(stmt: ts.BreakStatement) {
+  function visitBreakStatement(stmt: ts.BreakStatement): void {
     if (stmt.label) {
       pushConst(stmt.label.text)
       op.push(OpCode.BreakLabel)
@@ -289,14 +291,14 @@ export function gen(code: string): [(OpCode | OpValue)[], ConstantValue[]] {
     }
   }
 
-  function visitSwitchStatement(stmt: ts.SwitchStatement) {
+  function visitSwitchStatement(stmt: ts.SwitchStatement): void {
     const label1 = createLabel()
     const label2 = createLabel()
 
     const clauses = stmt.caseBlock.clauses.map(
       clause => [createLabel(), clause] as const
     )
-    const defaultClause = clauses.find(([_, clause]) =>
+    const defaultClause = clauses.find(([_, clause]): boolean =>
       ts.isDefaultClause(clause)
     )
     visitor(stmt.expression)
@@ -304,8 +306,8 @@ export function gen(code: string): [(OpCode | OpValue)[], ConstantValue[]] {
     op.push(OpCode.EnterIterableBlockScope)
     op.push(label2)
 
-    visitInBlockScope(stmt, () => {
-      clauses.forEach(([label, clause]) => {
+    visitInBlockScope(stmt, (): void => {
+      clauses.forEach(([label, clause]): void => {
         if (!ts.isDefaultClause(clause)) {
           op.push(OpCode.Dup)
           visitor(clause.expression)
@@ -320,7 +322,7 @@ export function gen(code: string): [(OpCode | OpValue)[], ConstantValue[]] {
         op.push(defaultClause[0])
       }
 
-      clauses.forEach(([label, clause]) => {
+      clauses.forEach(([label, clause]): void => {
         updateLabel(label)
         clause.statements.forEach(visitor)
       })
@@ -331,7 +333,7 @@ export function gen(code: string): [(OpCode | OpValue)[], ConstantValue[]] {
     updateLabel(label2)
   }
 
-  function visitForStatement(stmt: ts.ForStatement) {
+  function visitForStatement(stmt: ts.ForStatement): void {
     const label1 = createLabel()
     const label2 = createLabel()
     const label3 = createLabel()
@@ -339,7 +341,7 @@ export function gen(code: string): [(OpCode | OpValue)[], ConstantValue[]] {
     op.push(OpCode.EnterIterableBlockScope)
     op.push(label3)
 
-    visitInBlockScope(stmt, () => {
+    visitInBlockScope(stmt, (): void => {
       stmt.initializer && visitor(stmt.initializer)
 
       updateLabel(label1)
@@ -353,7 +355,7 @@ export function gen(code: string): [(OpCode | OpValue)[], ConstantValue[]] {
       op.push(label2)
 
       op.push(OpCode.EnterBlockScope)
-      visitInBlockScope(stmt.statement, () => visitor(stmt.statement))
+      visitInBlockScope(stmt.statement, (): void => visitor(stmt.statement))
       op.push(OpCode.ExitBlockScope)
 
       stmt.incrementor && visitor(stmt.incrementor)
@@ -366,12 +368,12 @@ export function gen(code: string): [(OpCode | OpValue)[], ConstantValue[]] {
     updateLabel(label3)
   }
 
-  function visitForInitializer(initializer: ts.ForInitializer) {
+  function visitForInitializer(initializer: ts.ForInitializer): void {
     switch (initializer.kind) {
-      case ts.SyntaxKind.VariableDeclarationList:
-        const declList = <ts.VariableDeclarationList>initializer
-        declList.declarations.forEach(decl => {
-          pushConst((<ts.Identifier>decl.name).text)
+      case ts.SyntaxKind.VariableDeclarationList: {
+        const declList = initializer as ts.VariableDeclarationList
+        declList.declarations.forEach((decl): void => {
+          pushConst((decl.name as ts.Identifier).text)
 
           switch (getVariableEnvirementType(declList)) {
             case EnvironmentType.block:
@@ -382,10 +384,11 @@ export function gen(code: string): [(OpCode | OpValue)[], ConstantValue[]] {
               break
           }
         })
+      }
     }
   }
 
-  function visitForInOrOfStatement(stmt: ts.ForInOrOfStatement) {
+  function visitForInOrOfStatement(stmt: ts.ForInOrOfStatement): void {
     const label1 = createLabel()
     const label2 = createLabel()
     const label3 = createLabel()
@@ -400,7 +403,7 @@ export function gen(code: string): [(OpCode | OpValue)[], ConstantValue[]] {
     op.push(OpCode.EnterIterableBlockScope)
     op.push(label3)
 
-    visitInBlockScope(stmt, () => {
+    visitInBlockScope(stmt, (): void => {
       updateLabel(label1)
       op.push(OpCode.Dup)
       if (ts.isForInStatement(stmt)) {
@@ -414,7 +417,7 @@ export function gen(code: string): [(OpCode | OpValue)[], ConstantValue[]] {
       visitForInitializer(stmt.initializer)
 
       op.push(OpCode.EnterBlockScope)
-      visitInBlockScope(stmt.statement, () => visitor(stmt.statement))
+      visitInBlockScope(stmt.statement, (): void => visitor(stmt.statement))
       op.push(OpCode.ExitBlockScope)
 
       op.push(OpCode.Jump)
@@ -426,7 +429,7 @@ export function gen(code: string): [(OpCode | OpValue)[], ConstantValue[]] {
     updateLabel(label3)
   }
 
-  function visitNewExpression(expr: ts.NewExpression) {
+  function visitNewExpression(expr: ts.NewExpression): void {
     const label1 = createLabel()
 
     const args = expr.arguments || ([] as ts.Expression[])
@@ -446,25 +449,25 @@ export function gen(code: string): [(OpCode | OpValue)[], ConstantValue[]] {
     updateLabel(label1)
   }
 
-  function visitThisExpression(expr: ts.ThisExpression) {
+  function visitThisExpression(_expr: ts.ThisExpression): void {
     op.push(OpCode.This)
   }
 
   function visitPropertyAccessExpression(
     propAccess: ts.PropertyAccessExpression
-  ) {
+  ): void {
     visitor(propAccess.expression)
     pushConst(propAccess.name.text)
     op.push(OpCode.PropAccess)
   }
 
-  function visitObjectLiteralExpression(obj: ts.ObjectLiteralExpression) {
+  function visitObjectLiteralExpression(obj: ts.ObjectLiteralExpression): void {
     obj.properties.forEach(visitObjectLiteralProperty)
     op.push(OpCode.CreateObject)
     op.push({ value: obj.properties.length })
   }
 
-  function visitObjectLiteralProperty(prop: ts.ObjectLiteralElementLike) {
+  function visitObjectLiteralProperty(prop: ts.ObjectLiteralElementLike): void {
     switch (prop.kind) {
       case ts.SyntaxKind.PropertyAssignment: {
         visitor(prop.initializer)
@@ -481,7 +484,7 @@ export function gen(code: string): [(OpCode | OpValue)[], ConstantValue[]] {
     }
   }
 
-  function visitPropertyName(name: ts.PropertyName) {
+  function visitPropertyName(name: ts.PropertyName): void {
     switch (name.kind) {
       case ts.SyntaxKind.Identifier:
         pushConst(name.text)
@@ -494,7 +497,7 @@ export function gen(code: string): [(OpCode | OpValue)[], ConstantValue[]] {
     }
   }
 
-  function visitArrayLiteralExpression(arr: ts.ArrayLiteralExpression) {
+  function visitArrayLiteralExpression(arr: ts.ArrayLiteralExpression): void {
     arr.elements.forEach(visitor)
     op.push(OpCode.CreateArray)
     op.push({ value: arr.elements.length })
@@ -502,13 +505,13 @@ export function gen(code: string): [(OpCode | OpValue)[], ConstantValue[]] {
 
   function visitElementAccessExpression(
     elementAccess: ts.ElementAccessExpression
-  ) {
+  ): void {
     visitor(elementAccess.expression)
     visitor(elementAccess.argumentExpression)
     op.push(OpCode.PropAccess)
   }
 
-  function visitParameter(param: ts.ParameterDeclaration) {
+  function visitParameter(param: ts.ParameterDeclaration): void {
     if (!ts.isIdentifier(param.name)) {
       throw new Error('not supported')
     }
@@ -517,7 +520,7 @@ export function gen(code: string): [(OpCode | OpValue)[], ConstantValue[]] {
     op.push(OpCode.Def)
   }
 
-  function visitReturnStatement(ret: ts.ReturnStatement) {
+  function visitReturnStatement(ret: ts.ReturnStatement): void {
     if (ret.expression) {
       visitor(ret.expression)
     } else {
@@ -531,7 +534,7 @@ export function gen(code: string): [(OpCode | OpValue)[], ConstantValue[]] {
     }
   }
 
-  function visitCallExpression(call: ts.CallExpression) {
+  function visitCallExpression(call: ts.CallExpression): void {
     call.arguments.forEach(visitor)
     op.push(OpCode.Push)
     op.push({ value: call.arguments.length })
@@ -544,7 +547,7 @@ export function gen(code: string): [(OpCode | OpValue)[], ConstantValue[]] {
     }
   }
 
-  function visitGeneratorDeclaration(func: ts.FunctionDeclaration) {
+  function visitGeneratorDeclaration(func: ts.FunctionDeclaration): void {
     const body = func.body
     if (!body) {
       throw new Error('function must have body')
@@ -601,7 +604,9 @@ export function gen(code: string): [(OpCode | OpValue)[], ConstantValue[]] {
     op.push(OpCode.CreateGenerator)
   }
 
-  function visitFunctionLikeDeclaration(func: ts.FunctionLikeDeclaration) {
+  function visitFunctionLikeDeclaration(
+    func: ts.FunctionLikeDeclaration
+  ): void {
     if (func.asteriskToken) {
       if (ts.isFunctionDeclaration(func)) {
         return visitGeneratorDeclaration(func)
@@ -639,7 +644,7 @@ export function gen(code: string): [(OpCode | OpValue)[], ConstantValue[]] {
     updateLabel(label2)
 
     const context = lexerContext.pop()!
-    context.upValue.forEach(u => pushConst(u))
+    context.upValue.forEach((u): void => pushConst(u))
     op.push(OpCode.Push)
     op.push({ value: context.upValue.size })
 
@@ -661,21 +666,21 @@ export function gen(code: string): [(OpCode | OpValue)[], ConstantValue[]] {
     }
   }
 
-  function visitBlock(block: ts.Block) {
+  function visitBlock(block: ts.Block): void {
     op.push(OpCode.EnterBlockScope)
     visitInBlockScope(block, () => block.statements.forEach(visitor))
     op.push(OpCode.ExitBlockScope)
   }
 
-  function visitNumericLiteral(node: ts.NumericLiteral) {
+  function visitNumericLiteral(node: ts.NumericLiteral): void {
     pushConst(+node.text)
   }
 
-  function visitStringLiteral(node: ts.StringLiteral) {
+  function visitStringLiteral(node: ts.StringLiteral): void {
     pushConst(node.text)
   }
 
-  function visitIdentifier(id: ts.Identifier) {
+  function visitIdentifier(id: ts.Identifier): void {
     pushConst(id.text)
     op.push(OpCode.Load)
 
@@ -702,7 +707,9 @@ export function gen(code: string): [(OpCode | OpValue)[], ConstantValue[]] {
     return EnvironmentType.lexer
   }
 
-  function visitVariableDeclarationList(variables: ts.VariableDeclarationList) {
+  function visitVariableDeclarationList(
+    variables: ts.VariableDeclarationList
+  ): void {
     variables.declarations.forEach(
       visitVariableDeclaration.bind(null, getVariableEnvirementType(variables))
     )
@@ -711,7 +718,7 @@ export function gen(code: string): [(OpCode | OpValue)[], ConstantValue[]] {
   function visitVariableDeclaration(
     type: EnvironmentType,
     variable: ts.VariableDeclaration
-  ) {
+  ): void {
     if (!variable.initializer) {
       return
     }
@@ -729,7 +736,7 @@ export function gen(code: string): [(OpCode | OpValue)[], ConstantValue[]] {
     }
   }
 
-  function visitBinaryExpression(binary: ts.BinaryExpression) {
+  function visitBinaryExpression(binary: ts.BinaryExpression): void {
     switch (binary.operatorToken.kind) {
       case ts.SyntaxKind.MinusEqualsToken:
       case ts.SyntaxKind.AsteriskAsteriskEqualsToken:
@@ -785,7 +792,7 @@ export function gen(code: string): [(OpCode | OpValue)[], ConstantValue[]] {
 
   function visitAssignmentExpression(
     expr: ts.AssignmentExpression<ts.AssignmentOperatorToken>
-  ) {
+  ): void {
     visitor(expr.right)
 
     if (expr.operatorToken.kind !== ts.SyntaxKind.EqualsToken) {
@@ -848,7 +855,7 @@ export function gen(code: string): [(OpCode | OpValue)[], ConstantValue[]] {
     op.push(OpCode.SetLeftValue)
   }
 
-  function visitWhileStatement(stmt: ts.WhileStatement) {
+  function visitWhileStatement(stmt: ts.WhileStatement): void {
     const label1 = createLabel()
     const label2 = createLabel()
 
@@ -863,7 +870,9 @@ export function gen(code: string): [(OpCode | OpValue)[], ConstantValue[]] {
     updateLabel(label1)
   }
 
-  function visitPrefixUnaryUpdateExpression(prefix: ts.PrefixUnaryExpression) {
+  function visitPrefixUnaryUpdateExpression(
+    prefix: ts.PrefixUnaryExpression
+  ): void {
     visitor(prefix.operand)
     op.push(OpCode.One)
     if (prefix.operator === ts.SyntaxKind.PlusPlusToken) {
@@ -876,7 +885,7 @@ export function gen(code: string): [(OpCode | OpValue)[], ConstantValue[]] {
     op.push(OpCode.SetLeftValue)
   }
 
-  function visitPrefixUnaryExpression(prefix: ts.PrefixUnaryExpression) {
+  function visitPrefixUnaryExpression(prefix: ts.PrefixUnaryExpression): void {
     switch (prefix.operator) {
       case ts.SyntaxKind.PlusPlusToken:
       case ts.SyntaxKind.MinusMinusToken:
@@ -906,7 +915,9 @@ export function gen(code: string): [(OpCode | OpValue)[], ConstantValue[]] {
     }
   }
 
-  function visitPostfixUnaryExpression(postfix: ts.PostfixUnaryExpression) {
+  function visitPostfixUnaryExpression(
+    postfix: ts.PostfixUnaryExpression
+  ): void {
     visitor(postfix.operand)
     op.push(OpCode.Dup)
     op.push(OpCode.One)
@@ -919,20 +930,20 @@ export function gen(code: string): [(OpCode | OpValue)[], ConstantValue[]] {
     op.push(OpCode.SetLeftValue)
   }
 
-  function visitLeftHandSideExpression(lhs: ts.UnaryExpression) {
+  function visitLeftHandSideExpression(lhs: ts.UnaryExpression): void {
     switch (lhs.kind) {
       case ts.SyntaxKind.Identifier:
-        pushConst((<ts.Identifier>lhs).text)
+        pushConst((lhs as ts.Identifier).text)
         op.push(OpCode.LoadLeftValue)
         break
       case ts.SyntaxKind.ElementAccessExpression:
-        visitor((<ts.ElementAccessExpression>lhs).argumentExpression)
-        visitor((<ts.ElementAccessExpression>lhs).expression)
+        visitor((lhs as ts.ElementAccessExpression).argumentExpression)
+        visitor((lhs as ts.ElementAccessExpression).expression)
         op.push(OpCode.LoadLeftValue)
         break
       case ts.SyntaxKind.PropertyAccessExpression:
-        pushConst((<ts.PropertyAccessExpression>lhs).name.text)
-        visitor((<ts.PropertyAccessExpression>lhs).expression)
+        pushConst((lhs as ts.PropertyAccessExpression).name.text)
+        visitor((lhs as ts.PropertyAccessExpression).expression)
         op.push(OpCode.LoadLeftValue)
         break
       default:
@@ -941,7 +952,7 @@ export function gen(code: string): [(OpCode | OpValue)[], ConstantValue[]] {
     }
   }
 
-  function visitConditionalExpression(cond: ts.ConditionalExpression) {
+  function visitConditionalExpression(cond: ts.ConditionalExpression): void {
     const label1 = createLabel()
     const label2 = createLabel()
 
@@ -959,7 +970,9 @@ export function gen(code: string): [(OpCode | OpValue)[], ConstantValue[]] {
     updateLabel(label1)
   }
 
-  function visitTemplateExpression(templateExpression: ts.TemplateExpression) {
+  function visitTemplateExpression(
+    templateExpression: ts.TemplateExpression
+  ): void {
     // Transform `A ${1} b ${2} c` to ["A ", 1, " b ", 2, " c"].join("")
 
     pushConst('')
@@ -969,12 +982,12 @@ export function gen(code: string): [(OpCode | OpValue)[], ConstantValue[]] {
 
     pushConst(templateExpression.head.text)
 
-    templateExpression.templateSpans.forEach(templateSpan => {
+    templateExpression.templateSpans.forEach((templateSpan): void => {
       visitor(templateSpan.expression)
       pushConst(templateSpan.literal.text)
     })
 
-    // one head plus expression and literal for each template expression
+    // one head plus expression and literal for each template span
     const len = 1 + 2 * templateExpression.templateSpans.length
     op.push(OpCode.CreateArray)
     op.push({ value: len })

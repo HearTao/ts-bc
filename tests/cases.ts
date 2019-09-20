@@ -1,4 +1,4 @@
-import VirtualMachine, { gen, JSString, VObject } from '../src'
+import VirtualMachine, { gen } from '../src'
 
 const code = `
 function foo () {

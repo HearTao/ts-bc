@@ -126,7 +126,7 @@ export interface LexerContext {
 }
 
 export class HeapEntry {
-  public ref: number = 0
+  ref = 0
 
   constructor(
     public value: string | Array<any> | Map<string | number, VObject>

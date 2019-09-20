@@ -21,7 +21,7 @@ export interface ConstantValueNumber extends ConstantValueBase {
   value: number
 }
 
-export interface COnstantValueBoolean extends ConstantValueBase {
+export interface ConstantValueBoolean extends ConstantValueBase {
   type: ConstantValueType.boolean
   value: boolean
 }
@@ -29,10 +29,10 @@ export interface COnstantValueBoolean extends ConstantValueBase {
 export type ConstantValue =
   | ConstantValueString
   | ConstantValueNumber
-  | COnstantValueBoolean
+  | ConstantValueBoolean
 
 export abstract class VObject {
-  public abstract debugValue(): any
+  abstract debugValue(): any
 
   isReference(): this is JSReference {
     return false
@@ -70,7 +70,7 @@ export abstract class VObject {
     return false
   }
 
-  asNumber() {
+  asNumber(): JSNumber {
     if (this.isNumber()) {
       return this
     }
@@ -78,7 +78,7 @@ export abstract class VObject {
     return new JSNumber(+this)
   }
 
-  asString() {
+  asString(): JSString {
     if (this.isString()) {
       return this
     }
@@ -96,7 +96,7 @@ export abstract class VObject {
 }
 
 export class JSValue extends VObject {
-  public properties: Map<string | number, JSPropertyDescriptor> = new Map()
+  properties: Map<string | number, JSPropertyDescriptor> = new Map()
 
   constructor(properties: Map<string | number, VObject> = new Map()) {
     super()
@@ -140,7 +140,7 @@ export class JSValue extends VObject {
     return JSUndefined.instance
   }
 
-  set(key: JSString | JSNumber, value: VObject) {
+  set(key: JSString | JSNumber, value: VObject): void {
     if (this.properties.has(key.value)) {
       const descriptor = this.properties.get(key.value)!
       descriptor.value = value
@@ -154,7 +154,7 @@ export class JSValue extends VObject {
     return this.properties.get(key)
   }
 
-  setDescriptor(key: string | number, descriptor: JSPropertyDescriptor) {
+  setDescriptor(key: string | number, descriptor: JSPropertyDescriptor): void {
     this.properties.set(key, descriptor)
   }
 }
@@ -216,7 +216,7 @@ export class JSObject extends JSHeapValue {
     throw new Error('invalid cast')
   }
 
-  debugValue() {
+  debugValue(): Record<string | number, any> {
     return fromEntries(
       Array.from(this.properties.entries())
         .filter(x => x[1].enumerable)
@@ -228,19 +228,19 @@ export class JSObject extends JSHeapValue {
 export abstract class JSPrimitive extends JSValue {
   protected abstract get value(): any
 
-  public debugValue() {
+  public debugValue(): any {
     return this.value
   }
 }
 
 export class JSUndefined extends JSPrimitive {
-  value: undefined = undefined
+  value = undefined
 
   isUndefined(): this is JSUndefined {
     return true
   }
 
-  asBoolean() {
+  asBoolean(): JSBoolean {
     return new JSBoolean(false)
   }
 
@@ -248,13 +248,13 @@ export class JSUndefined extends JSPrimitive {
 }
 
 export class JSNull extends JSPrimitive {
-  value: null = null
+  value = null
 
   isNull(): this is JSNull {
     return true
   }
 
-  asBoolean() {
+  asBoolean(): JSBoolean {
     return new JSBoolean(false)
   }
 
@@ -273,7 +273,7 @@ export class JSNumber extends JSPrimitive {
     return true
   }
 
-  asBoolean() {
+  asBoolean(): JSBoolean {
     return new JSBoolean(!!this.value)
   }
 }
@@ -286,7 +286,7 @@ export class JSBoolean extends JSPrimitive {
   static False = new JSBoolean(false)
   static True = new JSBoolean(true)
 
-  asBoolean() {
+  asBoolean(): JSBoolean {
     return this
   }
 
@@ -325,7 +325,7 @@ export class JSFunction extends JSObject {
     return false
   }
 
-  isBridge(): this is JSBirdgeFunction {
+  isBridge(): this is JSBridgeFunction {
     return false
   }
 
@@ -337,10 +337,10 @@ export class JSFunction extends JSObject {
 export class JSGeneratorFunction extends JSFunction {
   constructor(
     name: JSString = JSString.Empty,
-    length: number = -1,
-    pos: number = -1,
+    length = -1,
+    pos = -1,
     upvalue: Map<string, VObject> = new Map(),
-    text: string = ''
+    text = ''
   ) {
     super(name, length, pos, upvalue, text)
   }
@@ -366,7 +366,7 @@ export class JSLambda extends JSFunction {
   }
 }
 
-export class JSBirdgeFunction extends JSFunction {
+export class JSBridgeFunction extends JSFunction {
   constructor(
     public name: JSString,
     public func: (this: VObject, ...args: VObject[]) => void,
@@ -375,7 +375,7 @@ export class JSBirdgeFunction extends JSFunction {
     super(name, undefined, undefined, undefined, text)
   }
 
-  isBridge(): this is JSBirdgeFunction {
+  isBridge(): this is JSBridgeFunction {
     return true
   }
 
@@ -383,12 +383,12 @@ export class JSBirdgeFunction extends JSFunction {
     return false
   }
 
-  apply(self: VObject, args: VObject[]) {
+  apply(self: VObject, args: VObject[]): void {
     this.func.apply(self, args)
   }
 }
 
-export class JSNativeFunction extends JSBirdgeFunction {
+export class JSNativeFunction extends JSBridgeFunction {
   constructor(
     public name: JSString,
     public func: (this: VObject, ...args: VObject[]) => VObject
@@ -400,7 +400,7 @@ export class JSNativeFunction extends JSBirdgeFunction {
     return true
   }
 
-  apply(self: VObject, args: VObject[]) {
+  apply(self: VObject, args: VObject[]): VObject {
     return this.func.apply(self, args)
   }
 }
@@ -417,7 +417,7 @@ export class JSArray extends JSObject {
 
   static protoType: JSObject
 
-  asArray() {
+  asArray(): JSArray {
     return this
   }
 
@@ -425,13 +425,13 @@ export class JSArray extends JSObject {
     return true
   }
 
-  debugValue() {
+  debugValue(): any[] {
     return this.items.map(x => x.debugValue())
   }
 }
 
 export class JSForInOrOfIterator extends VObject {
-  curr: number = 0
+  curr = 0
 
   constructor(public target: JSValue) {
     super()
@@ -457,7 +457,6 @@ export interface LValueInfoPropertyAccess {
   obj: JSObject
   name: VObject
 }
-
 export type LValueInfo = LValueInfoIdentifier | LValueInfoPropertyAccess
 
 export class JSLValue extends VObject {
@@ -471,9 +470,9 @@ export class JSLValue extends VObject {
 }
 
 export class GeneratorContext extends VObject {
-  public ret: number = 0
-  public done: boolean = false
-  public stack: VObject[] = []
+  ret = 0
+  done = false
+  stack: VObject[] = []
 
   constructor(
     public pos: number,
