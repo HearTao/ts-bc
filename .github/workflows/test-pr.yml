@@ -12,10 +12,8 @@ jobs:
     - uses: actions/setup-node@v1
     - name: Install Dependencies
       run: npm i
-    - name: Run Formatter
-      run: npm run prettier-check
     - name: Run Linter
-      run: npm run lint -- --max-warnings=0
+      run: npm run lint-check -- --max-warnings=0
     - name: Run Test
       run: npm test
     - name: Run Browser Test

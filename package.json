@@ -14,9 +14,8 @@
     "test": "jest --testPathIgnorePatterns browser --testPathIgnorePatterns libs --testPathIgnorePatterns dist",
     "test:browser": "npm run build:browser && jest",
     "test:cases": "npm run build:cases && node ./dist/tests/cases.js",
-    "prettier": "prettier --config ./prettier.json --write ./types/**/* ./src/* ./src/**/* ./tests/**/*",
-    "prettier-check": "prettier --config ./prettier.json --check ./types/**/* ./src/* ./src/**/* ./tests/**/*",
-    "lint": "eslint \"src/**/*.ts\" \"tests/*.ts\" --fix"
+    "lint": "eslint \"src/**/*.ts\" \"tests/*.ts\" --fix",
+    "lint-check": "eslint \"src/**/*.ts\" \"tests/*.ts\""
   },
   "repository": {
     "type": "git",
