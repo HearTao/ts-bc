@@ -778,8 +778,16 @@ export function gen(code: string): [(OpCode | OpValue)[], ConstantValue[]] {
       case ts.SyntaxKind.ExclamationEqualsEqualsToken:
         op.push(OpCode.StrictNEQ)
         break
+      case ts.SyntaxKind.BarBarToken:
+        op.push(OpCode.LogicalOr)
+        break
+      case ts.SyntaxKind.AmpersandAmpersandToken:
+        op.push(OpCode.LogicalAnd)
+        break
       default:
-        throw new Error('not supported')
+        throw new Error(
+          'not supported operator: ' + ts.SyntaxKind[binary.operatorToken.kind]
+        )
     }
   }
 

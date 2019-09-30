@@ -1,14 +1,18 @@
 import { OpCode, OpValue } from './opcode'
 
+export function isOpCode(v: OpCode | OpValue): v is OpCode {
+  return typeof v === 'number'
+}
+
 export function assertOPValue(v: OpCode | OpValue): number {
-  if (typeof v === 'number') {
+  if (isOpCode(v)) {
     throw new Error(`${v} is value`)
   }
   return v.value
 }
 
 export function assertOPCode(v: OpCode | OpValue): OpCode {
-  if (typeof v !== 'number') {
+  if (!isOpCode(v)) {
     throw new Error(`${v} is not value`)
   }
   return v

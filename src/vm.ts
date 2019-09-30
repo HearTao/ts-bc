@@ -1056,6 +1056,16 @@ export default class VirtualMachine implements Callable {
         )
         break
       }
+      case OpCode.LogicalAnd: {
+        const firstAsBoolean = left.asBoolean()
+        this.stack.push(firstAsBoolean.value ? right : left)
+        break
+      }
+      case OpCode.LogicalOr: {
+        const firstAsBoolean = left.asBoolean()
+        this.stack.push(firstAsBoolean.value ? left : right)
+        break
+      }
     }
   }
 
