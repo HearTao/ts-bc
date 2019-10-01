@@ -6,14 +6,14 @@ export function isOpCode(v: OpCode | OpValue): v is OpCode {
 
 export function assertOPValue(v: OpCode | OpValue): number {
   if (isOpCode(v)) {
-    throw new Error(`${v} is value`)
+    throw new Error(`${v} is not value`)
   }
   return v.value
 }
 
 export function assertOPCode(v: OpCode | OpValue): OpCode {
   if (!isOpCode(v)) {
-    throw new Error(`${v} is not value`)
+    throw new Error(`${v} is value`)
   }
   return v
 }
