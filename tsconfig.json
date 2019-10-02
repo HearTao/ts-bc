@@ -5,6 +5,7 @@
         "moduleResolution": "node",
         "strict": true,
         "alwaysStrict": true,
+        "noFallthroughCasesInSwitch": true,
         "rootDir": "src",
         "outDir": "libs",
         "declaration": true,

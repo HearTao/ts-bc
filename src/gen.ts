@@ -1,6 +1,6 @@
 import * as ts from 'typescript'
-import { OpCode, OpValue, Label } from './opcode'
-import { EnvironmentType, ObjectMemberType, LexerContext } from './types'
+import { Label, OpCode, OpValue } from './opcode'
+import { EnvironmentType, LexerContext, ObjectMemberType } from './types'
 import { ConstantValue, ConstantValueType } from './value'
 import createVHost from 'ts-ez-host'
 import { last } from './utils'
@@ -132,6 +132,12 @@ export function gen(code: string): [(OpCode | OpValue)[], ConstantValue[]] {
         break
       case ts.SyntaxKind.TemplateExpression:
         visitTemplateExpression(<ts.TemplateExpression>node)
+        break
+      case ts.SyntaxKind.TypeOfExpression:
+        visitTypeOfExpression(<ts.TypeOfExpression>node)
+        break
+      case ts.SyntaxKind.NullKeyword:
+        op.push(OpCode.LoadNull)
         break
       default:
         ts.forEachChild(node, visitor)
@@ -676,6 +682,11 @@ export function gen(code: string): [(OpCode | OpValue)[], ConstantValue[]] {
   }
 
   function visitIdentifier(id: ts.Identifier) {
+    if (id.text === 'undefined') {
+      op.push(OpCode.LoadUndefined)
+      return
+    }
+
     pushConst(id.text)
     op.push(OpCode.Load)
 
@@ -990,5 +1001,10 @@ export function gen(code: string): [(OpCode | OpValue)[], ConstantValue[]] {
     pushConst('join')
 
     op.push(OpCode.CallMethod)
+  }
+
+  function visitTypeOfExpression(typeOfExpression: ts.TypeOfExpression): void {
+    visitor(typeOfExpression.expression)
+    op.push(OpCode.TypeOf)
   }
 }

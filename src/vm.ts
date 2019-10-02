@@ -890,6 +890,46 @@ export default class VirtualMachine implements Callable {
           break
         }
 
+        case OpCode.TypeOf: {
+          const value = this.popStack()
+          let string = 'unknown'
+
+          if (value.isUndefined()) {
+            string = 'undefined'
+          } else if (value.isNull()) {
+            string = 'object'
+          } else if (value.isBoolean()) {
+            string = 'boolean'
+          } else if (value.isNumber()) {
+            string = 'number'
+          } else if (value.isString()) {
+            string = 'string'
+          } else if (value.isValue() && value.isFunction()) {
+            if (value.isBridge() && value.isNative()) {
+              string = '[native]'
+            } else if (value.isBridge()) {
+              string = '[bridge]'
+            } else {
+              string = 'function'
+            }
+          } else if (value.isObject()) {
+            string = 'object'
+          }
+
+          this.stack.push(new JSString(string))
+          break
+        }
+
+        case OpCode.LoadNull: {
+          this.stack.push(JSNull.instance)
+          break
+        }
+
+        case OpCode.LoadUndefined: {
+          this.stack.push(JSUndefined.instance)
+          break
+        }
+
         default:
           assertNever(op)
           break
