@@ -50,14 +50,10 @@ export function initTsBcUtils(
         const actual = args[2].debugValue()
 
         if (JSON.stringify(expected) !== JSON.stringify(actual)) {
-          console.log(
-            `${message}: expected: ${JSON.stringify(
-              expected,
-              null,
-              2
-            )}, but got: ${JSON.stringify(actual, null, 2)}`
-          )
-          throw new Error()
+          const errorMessage = `${message}.\n\nExpected: ${JSON.stringify(
+            expected
+          )}\n  Actual: ${JSON.stringify(actual)}`
+          throw new Error(errorMessage)
         }
 
         return JSUndefined.instance

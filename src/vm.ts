@@ -993,6 +993,8 @@ export default class VirtualMachine implements Callable {
       case OpCode.StrictEQ: {
         if (left.isNumber() && right.isNumber()) {
           this.stack.push(new JSBoolean(left.value === right.value))
+        } else if (left.isString() && right.isString()) {
+          this.stack.push(new JSBoolean(left.value === right.value))
         } else {
           this.stack.push(new JSBoolean(left === right))
         }
