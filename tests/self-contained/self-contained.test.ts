@@ -4,7 +4,7 @@ import VirtualMachine, { gen, isOpCode, OpCode } from '../../src'
 
 const PRINT_CODES = false
 
-test(`check js code in abstract mode`, () => {
+test(`check js code`, () => {
   const testDir = 'tests/self-contained/'
   const testcaseDir = `${testDir}testcases/`
 
