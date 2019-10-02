@@ -31,6 +31,16 @@ export function initGC(vm: Callable, valueTable: Map<string, VObject>) {
   )
 }
 
+export function initPrint(vm: Callable, valueTable: Map<string, VObject>) {
+  valueTable.set(
+    'print',
+    new JSNativeFunction(new JSString('print'), (...args) => {
+      console.log.call(null, args.map(x => x.debugValue()))
+      return JSUndefined.instance
+    })
+  )
+}
+
 export function initTsBcUtils(
   vm: Callable,
   valueTable: Map<string, VObject>
@@ -62,16 +72,6 @@ export function initTsBcUtils(
   )
 
   valueTable.set('tsBcUtils', objectCtor)
-}
-
-export function initPrint(vm: Callable, valueTable: Map<string, VObject>) {
-  valueTable.set(
-    'print',
-    new JSNativeFunction(new JSString('print'), (...args) => {
-      console.log.call(null, args.map(x => x.debugValue()))
-      return JSUndefined.instance
-    })
-  )
 }
 
 export function initPrototype(vm: Callable, valueTable: Map<string, VObject>) {
