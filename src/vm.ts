@@ -920,16 +920,6 @@ export default class VirtualMachine implements Callable {
           break
         }
 
-        case OpCode.LoadNull: {
-          this.stack.push(JSNull.instance)
-          break
-        }
-
-        case OpCode.LoadUndefined: {
-          this.stack.push(JSUndefined.instance)
-          break
-        }
-
         default:
           assertNever(op)
           break

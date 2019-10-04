@@ -137,7 +137,7 @@ export function gen(code: string): [(OpCode | OpValue)[], ConstantValue[]] {
         visitTypeOfExpression(<ts.TypeOfExpression>node)
         break
       case ts.SyntaxKind.NullKeyword:
-        op.push(OpCode.LoadNull)
+        op.push(OpCode.Null)
         break
       default:
         ts.forEachChild(node, visitor)
@@ -683,7 +683,7 @@ export function gen(code: string): [(OpCode | OpValue)[], ConstantValue[]] {
 
   function visitIdentifier(id: ts.Identifier) {
     if (id.text === 'undefined') {
-      op.push(OpCode.LoadUndefined)
+      op.push(OpCode.Undefined)
       return
     }
 
