@@ -19,6 +19,7 @@ export function init(vm: Callable, valueTable: Map<string, VObject>) {
 
   initGC(vm, valueTable)
   initPrint(vm, valueTable)
+  initTsBcUtils(vm, valueTable)
 }
 
 export function initGC(vm: Callable, valueTable: Map<string, VObject>) {
@@ -38,6 +39,39 @@ export function initPrint(vm: Callable, valueTable: Map<string, VObject>) {
       return JSUndefined.instance
     })
   )
+}
+
+export function initTsBcUtils(
+  vm: Callable,
+  valueTable: Map<string, VObject>
+): void {
+  const objectCtor = new JSNativeFunction(
+    JSString.Empty,
+    (): JSObject => new JSObject()
+  )
+
+  objectCtor.set(
+    new JSString('assertEquals'),
+    new JSNativeFunction(
+      new JSString('assertEquals'),
+      (...args): JSUndefined => {
+        const message = args[0].asString().value
+        const expected = args[1].debugValue()
+        const actual = args[2].debugValue()
+
+        if (JSON.stringify(expected) !== JSON.stringify(actual)) {
+          const errorMessage = `${message}.\n\nExpected: ${JSON.stringify(
+            expected
+          )}\n  Actual: ${JSON.stringify(actual)}`
+          throw new Error(errorMessage)
+        }
+
+        return JSUndefined.instance
+      }
+    )
+  )
+
+  valueTable.set('tsBcUtils', objectCtor)
 }
 
 export function initPrototype(vm: Callable, valueTable: Map<string, VObject>) {

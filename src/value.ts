@@ -91,7 +91,21 @@ export abstract class VObject {
   }
 
   asBoolean(): JSBoolean {
-    throw new Error('invalid cast')
+    if (this.isBoolean()) {
+      return this
+    }
+
+    const isNullOrUndefined = this.isNull() || this.isUndefined()
+    const isZeroOrNaN =
+      this.isNumber() &&
+      (this.asNumber().value === 0 || isNaN(this.asNumber().value))
+    const isEmptyString = this.isString() && this.asString().value == ''
+
+    if (isNullOrUndefined || isZeroOrNaN || isEmptyString) {
+      return new JSBoolean(false)
+    }
+
+    return new JSBoolean(true)
   }
 }
 

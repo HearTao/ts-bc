@@ -89,7 +89,9 @@ export enum OpCode {
   ForInStart,
   ForInNext,
   ForOfStart,
-  ForOfNext
+  ForOfNext,
+
+  TypeOf
 }
 
 export interface OpValue {

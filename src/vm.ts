@@ -890,6 +890,36 @@ export default class VirtualMachine implements Callable {
           break
         }
 
+        case OpCode.TypeOf: {
+          const value = this.popStack()
+          let string = 'unknown'
+
+          if (value.isUndefined()) {
+            string = 'undefined'
+          } else if (value.isNull()) {
+            string = 'object'
+          } else if (value.isBoolean()) {
+            string = 'boolean'
+          } else if (value.isNumber()) {
+            string = 'number'
+          } else if (value.isString()) {
+            string = 'string'
+          } else if (value.isValue() && value.isFunction()) {
+            if (value.isBridge() && value.isNative()) {
+              string = '[native]'
+            } else if (value.isBridge()) {
+              string = '[bridge]'
+            } else {
+              string = 'function'
+            }
+          } else if (value.isObject()) {
+            string = 'object'
+          }
+
+          this.stack.push(new JSString(string))
+          break
+        }
+
         default:
           assertNever(op)
           break
@@ -993,6 +1023,8 @@ export default class VirtualMachine implements Callable {
       case OpCode.StrictEQ: {
         if (left.isNumber() && right.isNumber()) {
           this.stack.push(new JSBoolean(left.value === right.value))
+        } else if (left.isString() && right.isString()) {
+          this.stack.push(new JSBoolean(left.value === right.value))
         } else {
           this.stack.push(new JSBoolean(left === right))
         }
@@ -1054,6 +1086,16 @@ export default class VirtualMachine implements Callable {
         this.stack.push(
           new JSNumber(left.asNumber().value >>> right.asNumber().value)
         )
+        break
+      }
+      case OpCode.LogicalAnd: {
+        const firstAsBoolean = left.asBoolean()
+        this.stack.push(firstAsBoolean.value ? right : left)
+        break
+      }
+      case OpCode.LogicalOr: {
+        const firstAsBoolean = left.asBoolean()
+        this.stack.push(firstAsBoolean.value ? left : right)
         break
       }
     }
