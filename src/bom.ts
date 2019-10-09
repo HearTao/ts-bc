@@ -217,6 +217,64 @@ function initArrayConstructor(valueTable: Map<string, VObject>) {
     )
   )
 
+  araryProto.set(
+    new JSString('indexOf'),
+    new JSNativeFunction(new JSString('indexOf'), function(
+      searchElement
+    ): JSNumber {
+      const toPrimitiveValue = (
+        value: VObject
+      ): string | number | boolean | undefined => {
+        if (value.isNumber()) {
+          return value.asNumber().value
+        } else if (value.isString()) {
+          return value.asString().value
+        } else if (value.isBoolean()) {
+          return value.asBoolean().value
+        }
+      }
+
+      if (!(this.isObject() && this.isArray())) {
+        return new JSNumber(-1)
+      }
+
+      const primitiveSearchElement = toPrimitiveValue(searchElement)
+
+      if (
+        primitiveSearchElement === undefined &&
+        !searchElement.isUndefined() &&
+        !searchElement.isNull()
+      ) {
+        return new JSNumber(-1)
+      }
+
+      let resultIndex = -1
+      const items = this.asArray().items
+      for (let i = 0; i < items.length; i++) {
+        const item = items[i]
+        const primitiveItem = toPrimitiveValue(item)
+
+        if (primitiveItem === undefined) {
+          if (item.isNull() && searchElement.isNull()) {
+            resultIndex = i
+            break
+          }
+
+          if (item.isUndefined() && searchElement.isUndefined()) {
+            resultIndex = i
+            break
+          }
+        }
+
+        if (primitiveSearchElement === primitiveItem) {
+          resultIndex = i
+          break
+        }
+      }
+      return new JSNumber(resultIndex)
+    })
+  )
+
   valueTable.set('Array', arrayCtor)
 }
 
@@ -238,6 +296,32 @@ function initStringConstructor(valueTable: Map<string, VObject>) {
         )
       }
       return new JSArray([])
+    })
+  )
+
+  stringProto.set(
+    new JSString('indexOf'),
+    new JSNativeFunction(new JSString('indexOf'), function(str): JSNumber {
+      if (this.isString() && str.isString()) {
+        return new JSNumber(this.asString().value.indexOf(str.asString().value))
+      }
+      return new JSNumber(-1)
+    })
+  )
+
+  stringProto.set(
+    new JSString('substring'),
+    new JSNativeFunction(new JSString('substring'), function(
+      ...args
+    ): JSString {
+      const self = this as JSString
+      const indexStartValue = args[0].asNumber().value
+      let indexEndValue = undefined
+      const indexEnd = args[1]
+      if (indexEnd) {
+        indexEndValue = indexEnd.asNumber().value
+      }
+      return new JSString(self.value.substring(indexStartValue, indexEndValue))
     })
   )
 
