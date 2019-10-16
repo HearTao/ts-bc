@@ -478,6 +478,13 @@ export function gen(code: string): [(OpCode | OpValue)[], ConstantValue[]] {
         pushConst(ObjectMemberType.property)
         break
       }
+      case ts.SyntaxKind.ShorthandPropertyAssignment: {
+        pushConst(prop.name.text)
+        op.push(OpCode.Load)
+        visitPropertyName(prop.name)
+        pushConst(ObjectMemberType.property)
+        break
+      }
       case ts.SyntaxKind.GetAccessor: {
         visitFunctionLikeDeclaration(prop)
         visitPropertyName(prop.name)
