@@ -1,20 +1,21 @@
-import * as path from 'path'
-import * as webpack from 'webpack'
+const path = require('path')
 
-export default function WebpackConfig(): webpack.Configuration[] {
-  return [
+module.exports = [
   {
     mode: 'production',
     output: {
       path: path.resolve(__dirname, 'libs'),
       filename: 'browser.js',
-      library: 'TSBC',
+      library: 'TSBC'
     },
+    node: { fs: 'empty' },
     module: {
-      rules: [{
-        test: /\.ts$/,
-        use: 'ts-loader'
-      }]
+      rules: [
+        {
+          test: /\.ts$/,
+          use: 'ts-loader'
+        }
+      ]
     },
     externals: {
       typescript: 'TypeScript'
@@ -29,13 +30,15 @@ export default function WebpackConfig(): webpack.Configuration[] {
     output: {
       path: __dirname,
       filename: 'typescript.js',
-      library: 'TypeScript',
+      library: 'TypeScript'
     },
     module: {
-      rules: [{
-        test: /\.ts$/,
-        use: 'ts-loader'
-      }]
+      rules: [
+        {
+          test: /\.ts$/,
+          use: 'ts-loader'
+        }
+      ]
     },
     externals: {
       // typescript: 'TypeScript'
@@ -47,5 +50,5 @@ export default function WebpackConfig(): webpack.Configuration[] {
         ['@microsoft/typescript-etw']: path.resolve(__dirname, 'mock.js')
       }
     }
-  }]
-}
+  }
+]

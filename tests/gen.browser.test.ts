@@ -32,7 +32,7 @@ async function run(code: string) {
   const wrap = `\
 ;(() => {
   const { default: VirtualMachine, gen } = TSBC
-  const [op, value] = gen(\`${code}\`)
+  const [op, value] = gen(\`${code}\`, {})
   const vm = new VirtualMachine(op, value)
   return vm.exec().value.debugValue()
 })();`
