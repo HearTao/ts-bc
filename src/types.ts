@@ -132,3 +132,10 @@ export class HeapEntry {
     public value: string | Array<any> | Map<string | number, VObject>
   ) {}
 }
+
+export type ObjectFile = [(OpCode | OpValue)[], ConstantValue[]]
+
+export type CompileOptions = {
+  filepath: string
+  compileCalls: Map<string, number>
+}

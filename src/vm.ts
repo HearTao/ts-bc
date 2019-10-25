@@ -53,6 +53,9 @@ export default class VirtualMachine implements Callable {
   private environments: Environment[] = []
   private heap: JSHeapValue[] = []
 
+  private exportValues: Map<string, Map<string, VObject>> = new Map()
+  private exportFiles: [string, boolean][] = []
+
   constructor(
     private codes: (OpCode | OpValue)[] = [],
     private constants: ConstantValue[] = [],
@@ -917,6 +920,103 @@ export default class VirtualMachine implements Callable {
           }
 
           this.stack.push(new JSString(string))
+          break
+        }
+
+        case OpCode.ExportKeyword: {
+          const filepath = (this.popStack() as JSString).value
+          const value = this.popStack()
+          if (value.isValue() && value.isFunction()) {
+            /* corresponds to 'export function ...' */
+            const variable = value as JSFunction
+            const fileExports = this.exportValues.get(filepath) || new Map()
+            fileExports.set(variable.name.value, variable)
+            this.exportValues.set(filepath, fileExports)
+          }
+
+          if (value.isString()) {
+            /* corresponds to 'export const ...' */
+            const variable = value as JSString
+            const initializer = this.popStack()
+            const fileExports = this.exportValues.get(filepath) || new Map()
+            fileExports.set(variable.value, initializer)
+            this.exportValues.set(filepath, fileExports)
+          }
+          break
+        }
+
+        case OpCode.ImportSpecifier: {
+          const [filename, isCyclicImport] = last(this.exportFiles)
+          const code = this.popCode()
+          const WITHOUT_IMPORT_RENAMING = 1
+          const WITH_IMPORT_RENAMING = 2
+          switch (code) {
+            case WITHOUT_IMPORT_RENAMING: {
+              const name = this.popStack() as JSString
+              if (isCyclicImport) {
+                const emptyFunction = new JSNativeFunction(
+                  new JSString(''),
+                  function(): JSUndefined {
+                    return JSUndefined.instance
+                  }
+                )
+                this.define(name.value, emptyFunction, EnvironmentType.block)
+              } else {
+                const exportedModule = this.exportValues.get(filename)
+                if (exportedModule === undefined) {
+                  throw new Error(
+                    `Can't find '${name.value}' export in '${filename}' file.`
+                  )
+                }
+                const exportValue = exportedModule.get(name.value)
+                if (exportValue === undefined) {
+                  throw new Error(
+                    `Can't find '${name.value}' export in '${filename}' file.`
+                  )
+                }
+                this.define(name.value, exportValue, EnvironmentType.block)
+              }
+              break
+            }
+            case WITH_IMPORT_RENAMING: {
+              const name = this.popStack() as JSString
+              const propertyName = this.popStack() as JSString
+              if (isCyclicImport) {
+                const emptyFunction = new JSNativeFunction(
+                  new JSString(''),
+                  function(): JSUndefined {
+                    return JSUndefined.instance
+                  }
+                )
+                this.define(name.value, emptyFunction, EnvironmentType.block)
+              } else {
+                const exportedModule = this.exportValues.get(filename)
+                if (exportedModule === undefined) {
+                  throw new Error(
+                    `Can't find '${name.value}' export in '${filename}' file.`
+                  )
+                }
+                const exportValue = exportedModule.get(propertyName.value)
+                if (exportValue === undefined) {
+                  throw new Error(
+                    `Can't find '${propertyName.value}' export in '${filename}' file.`
+                  )
+                }
+                this.define(name.value, exportValue, EnvironmentType.block)
+              }
+              break
+            }
+            default: {
+              break
+            }
+          }
+          break
+        }
+
+        case OpCode.ModuleSpecifier: {
+          const name = this.popStack() as JSString
+          const isCyclicImport = this.popStack() as JSBoolean
+          this.exportFiles.push([name.value, isCyclicImport.value])
           break
         }
 
