@@ -137,5 +137,10 @@ export type ObjectFile = [(OpCode | OpValue)[], ConstantValue[]]
 
 export type CompileOptions = {
   filepath: string
-  compileCalls: Map<string, number>
+  importNode: ImportNode
+}
+
+export type ImportNode = {
+  name: string
+  parent: ImportNode | null
 }

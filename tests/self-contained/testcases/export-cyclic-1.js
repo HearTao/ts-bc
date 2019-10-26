@@ -1,9 +1,5 @@
-import { getForty } from './export-cyclic-2.js'
+import { foo, bar } from './export-cyclic-2'
 
-export const one = 1
+export const baz = () => 'baz'
 
-const fortyOne = getForty() + one
-
-export function getFortyTwo() {
-  return fortyOne + one
-}
+export const foobar = () => `${foo()}${bar()}`

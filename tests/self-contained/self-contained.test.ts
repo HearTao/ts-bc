@@ -6,12 +6,12 @@ import * as path from 'path'
 const PRINT_CODES = false
 
 {
-  test('import-cyclic.js', () => {
-    run('import-cyclic.js')
-  })
-
   test('import-deep.js', () => {
     run('import-deep.js')
+  })
+
+  test('import-cyclic.js', () => {
+    run('import-cyclic.js')
   })
 
   test('indexOf.js', () => {

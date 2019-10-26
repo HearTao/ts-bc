@@ -3,6 +3,7 @@ import { Label, OpCode, OpValue } from './opcode'
 import {
   CompileOptions,
   EnvironmentType,
+  ImportNode,
   LexerContext,
   ObjectFile,
   ObjectMemberType
@@ -18,7 +19,7 @@ export function gen(
   compileOptions: Partial<CompileOptions>
 ): ObjectFile {
   const filepath = compileOptions.filepath || '.'
-  const compileCalls = compileOptions.compileCalls || new Map().set(filepath, 1)
+  const importNode = compileOptions.importNode || { parent: null, name: 'top' }
 
   const op: (OpCode | OpValue)[] = []
   const constants: ConstantValue[] = []
@@ -1065,37 +1066,45 @@ export function gen(
     op.push(OpCode.TypeOf)
   }
 
+  function isCyclicImport(node: ImportNode, name: string): boolean {
+    let count = 0
+    while (node.parent !== null) {
+      if (node.name === name) {
+        count += 1
+      }
+      if (count === 2) {
+        return true
+      }
+      node = node.parent
+    }
+    return false
+  }
+
   function visitImportDeclaration(
     importDeclaration: ts.ImportDeclaration
   ): void {
     const moduleSpecifier = importDeclaration.moduleSpecifier as ts.StringLiteral
-    const importedAbsoluteFilepath = getAbsoluteFilepath(
+    const importAbsoluteFilepath = getAbsoluteFilepath(
       filepath,
       moduleSpecifier.text
     )
 
-    compileCalls.set(
-      importedAbsoluteFilepath,
-      (compileCalls.get(importedAbsoluteFilepath) || 0) + 1
+    const isCyclic = isCyclicImport(
+      JSON.parse(JSON.stringify(importNode)),
+      importAbsoluteFilepath
     )
 
-    const isCyclicImport =
-      compileCalls.get(filepath) >= 2 &&
-      compileCalls.get(importedAbsoluteFilepath) >= 2
-    if (!isCyclicImport) {
-      const importedFileContent = readFileSync(
-        importedAbsoluteFilepath,
-        'utf-8'
-      )
-      const compilerResult = gen(`(function() { ${importedFileContent} })()`, {
-        filepath: importedAbsoluteFilepath,
-        compileCalls
+    if (!isCyclic) {
+      const importFileContent = readFileSync(importAbsoluteFilepath, 'utf-8')
+      const compilerResult = gen(`(function() { ${importFileContent} })()`, {
+        filepath: importAbsoluteFilepath,
+        importNode: { parent: importNode, name: importAbsoluteFilepath }
       })
       objectFiles.push(compilerResult)
     }
 
-    pushConst(isCyclicImport)
-    pushConst(importedAbsoluteFilepath)
+    pushConst(isCyclic)
+    pushConst(importAbsoluteFilepath)
     op.push(OpCode.ModuleSpecifier)
 
     if (importDeclaration.importClause) {

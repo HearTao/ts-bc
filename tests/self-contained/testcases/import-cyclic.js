@@ -1,7 +1,5 @@
-import { getFortyTwo as getMagicNumber } from './export-cyclic-1.js'
+import { foobar } from './export-cyclic-1'
+import { foobarbaz } from './export-cyclic-2'
 
-export const cyclicReference = 39
-
-if (getMagicNumber() !== undefined) {
-  tsBcUtils.assertEquals('import/export', 42, getMagicNumber())
-}
+tsBcUtils.assertEquals('import/export', 'foobar', foobar())
+tsBcUtils.assertEquals('import/export', 'foobarbaz', foobarbaz())

@@ -1,6 +1,7 @@
-import { cyclicReference } from './import-cyclic.js'
-import { one } from './export-cyclic-1.js'
+import { baz } from './export-cyclic-1'
 
-const thirtyNine = cyclicReference
+export const foo = () => 'foo'
 
-export const getForty = () => thirtyNine + one
+export const bar = () => 'bar'
+
+export const foobarbaz = () => `${foo()}${bar()}${baz()}`
