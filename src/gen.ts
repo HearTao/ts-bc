@@ -16,7 +16,7 @@ import * as path from 'path'
 
 export function gen(
   code: string,
-  compileOptions: Partial<CompileOptions>
+  compileOptions: Partial<CompileOptions> = {}
 ): ObjectFile {
   const filepath = compileOptions.filepath || '.'
   const importNode = compileOptions.importNode || { parent: null, name: 'top' }

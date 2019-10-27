@@ -3,14 +3,14 @@ import { gen } from '../src/gen'
 import { ExecResult } from '../src/types'
 
 function run(code: string) {
-  const [op, value] = gen(code, {})
+  const [op, value] = gen(code)
   const vm = new VirtualMachine(op, value)
 
   expect(vm.exec().value.debugValue()).toStrictEqual(eval(code))
 }
 
 function runUnorder(code: string) {
-  const [op, value] = gen(code, {})
+  const [op, value] = gen(code)
   const vm = new VirtualMachine(op, value)
 
   expect(
@@ -22,7 +22,7 @@ function runUnorder(code: string) {
 }
 
 function stepRun(code: string) {
-  const [op, value] = gen(code, {})
+  const [op, value] = gen(code)
   const vm = new VirtualMachine(op, value)
 
   let result: ExecResult
@@ -655,7 +655,7 @@ test(`should work with step exec`, () => {
 
 test(`should work with dump and load`, () => {
   const code = '0 ? 2 : 0 ? 3 : 4'
-  const [op, value] = gen(code, {})
+  const [op, value] = gen(code)
   const vm = new VirtualMachine(op, value)
 
   vm.exec(/* step */ true)
