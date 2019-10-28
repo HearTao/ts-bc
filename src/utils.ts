@@ -1,4 +1,6 @@
 import { OpCode, OpValue } from './opcode'
+import { ObjectFile } from './types'
+import { ConstantValue } from './value'
 
 export function isOpCode(v: OpCode | OpValue): v is OpCode {
   return typeof v === 'number'
@@ -63,4 +65,46 @@ export function fromEntries<K extends keyof any, V>(
     },
     {} as Record<K, V>
   )
+}
+
+export function link(objectFiles: ObjectFile[]): ObjectFile {
+  if (objectFiles.length === 1) {
+    return objectFiles[0]
+  }
+
+  let resultOp: (OpCode | OpValue)[] = []
+  let resultValue: ConstantValue[] = []
+
+  for (const objectFile of objectFiles) {
+    const [op, value] = objectFile
+    const currentOp: (OpCode | OpValue)[] = []
+
+    for (const o of op) {
+      if (isOpCode(o)) {
+        currentOp.push(o)
+      } else {
+        let value = o
+        switch (o.kind) {
+          case 'normal': {
+            value = o
+            break
+          }
+          case 'label': {
+            value = { value: resultOp.length + o.value, kind: o.kind }
+            break
+          }
+          case 'constant': {
+            value = { value: resultValue.length + o.value, kind: o.kind }
+            break
+          }
+        }
+        currentOp.push(value)
+      }
+    }
+
+    resultOp = resultOp.concat(currentOp)
+    resultValue = resultValue.concat(value)
+  }
+
+  return [resultOp, resultValue]
 }

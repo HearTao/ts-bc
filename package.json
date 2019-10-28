@@ -31,7 +31,7 @@
   ],
   "homepage": "https://github.com/HearTao/ts-bc#readme",
   "dependencies": {
-    "memfs": "^2.15.5",
+    "memfs": "2.15.5",
     "ts-ez-host": "^0.0.7",
     "typescript": "^3.7.0-dev.20190822"
   },

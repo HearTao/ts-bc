@@ -91,10 +91,19 @@ export enum OpCode {
   ForOfStart,
   ForOfNext,
 
-  TypeOf
+  TypeOf,
+
+  // Called for every export keyword for function or variable
+  ExportKeyword,
+
+  // Imported statements
+  ImportSpecifier,
+  // Imported file name
+  ModuleSpecifier
 }
 
 export interface OpValue {
+  kind: 'label' | 'constant' | 'normal'
   value: number
 }
 

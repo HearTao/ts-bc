@@ -1,13 +1,29 @@
 import * as ts from 'typescript'
 import { Label, OpCode, OpValue } from './opcode'
-import { EnvironmentType, LexerContext, ObjectMemberType } from './types'
+import {
+  CompileOptions,
+  EnvironmentType,
+  ImportNode,
+  LexerContext,
+  ObjectFile,
+  ObjectMemberType
+} from './types'
 import { ConstantValue, ConstantValueType } from './value'
 import createVHost from 'ts-ez-host'
-import { last } from './utils'
+import { last, link } from './utils'
+import { existsSync, readFileSync } from 'fs'
+import * as path from 'path'
 
-export function gen(code: string): [(OpCode | OpValue)[], ConstantValue[]] {
+export function gen(
+  code: string,
+  compileOptions: Partial<CompileOptions> = {}
+): ObjectFile {
+  const filepath = compileOptions.filepath || '.'
+  const importNode = compileOptions.importNode || { parent: null, name: 'top' }
+
   const op: (OpCode | OpValue)[] = []
   const constants: ConstantValue[] = []
+  const objectFiles: ObjectFile[] = []
 
   const host = createVHost()
   const filename = 'mod.tsx'
@@ -28,7 +44,10 @@ export function gen(code: string): [(OpCode | OpValue)[], ConstantValue[]] {
 
   ts.forEachChild(sourceFile!, visitor)
 
-  return [op, constants]
+  const mainObjectFile: ObjectFile = [op, constants]
+  objectFiles.push(mainObjectFile)
+
+  return link(objectFiles)
 
   function visitor(node: ts.Node) {
     switch (node.kind) {
@@ -139,13 +158,22 @@ export function gen(code: string): [(OpCode | OpValue)[], ConstantValue[]] {
       case ts.SyntaxKind.NullKeyword:
         op.push(OpCode.Null)
         break
+      case ts.SyntaxKind.ImportDeclaration:
+        visitImportDeclaration(node as ts.ImportDeclaration)
+        break
+      case ts.SyntaxKind.NamedImports:
+        visitNamedImports(node as ts.NamedImports)
+        break
+      case ts.SyntaxKind.ImportSpecifier:
+        visitImportSpecifier(node as ts.ImportSpecifier)
+        break
       default:
         ts.forEachChild(node, visitor)
     }
   }
 
   function createLabel(): Label {
-    return { value: op.length }
+    return { value: op.length, kind: 'label' }
   }
 
   function updateLabel(l: Label) {
@@ -175,7 +203,7 @@ export function gen(code: string): [(OpCode | OpValue)[], ConstantValue[]] {
     }
 
     op.push(OpCode.Const)
-    op.push({ value: constants.length - 1 })
+    op.push({ value: constants.length - 1, kind: 'constant' })
   }
 
   function visitYieldExpression(expr: ts.YieldExpression) {
@@ -438,7 +466,7 @@ export function gen(code: string): [(OpCode | OpValue)[], ConstantValue[]] {
     const args = expr.arguments || ([] as ts.Expression[])
     args.forEach(visitor)
     op.push(OpCode.Push)
-    op.push({ value: args.length })
+    op.push({ value: args.length, kind: 'normal' })
     visitor(expr.expression)
     op.push(OpCode.New)
     op.push(OpCode.Dup)
@@ -467,7 +495,7 @@ export function gen(code: string): [(OpCode | OpValue)[], ConstantValue[]] {
   function visitObjectLiteralExpression(obj: ts.ObjectLiteralExpression) {
     obj.properties.forEach(visitObjectLiteralProperty)
     op.push(OpCode.CreateObject)
-    op.push({ value: obj.properties.length })
+    op.push({ value: obj.properties.length, kind: 'normal' })
   }
 
   function visitObjectLiteralProperty(prop: ts.ObjectLiteralElementLike) {
@@ -510,7 +538,7 @@ export function gen(code: string): [(OpCode | OpValue)[], ConstantValue[]] {
   function visitArrayLiteralExpression(arr: ts.ArrayLiteralExpression) {
     arr.elements.forEach(visitor)
     op.push(OpCode.CreateArray)
-    op.push({ value: arr.elements.length })
+    op.push({ value: arr.elements.length, kind: 'normal' })
   }
 
   function visitElementAccessExpression(
@@ -547,7 +575,7 @@ export function gen(code: string): [(OpCode | OpValue)[], ConstantValue[]] {
   function visitCallExpression(call: ts.CallExpression) {
     call.arguments.forEach(visitor)
     op.push(OpCode.Push)
-    op.push({ value: call.arguments.length })
+    op.push({ value: call.arguments.length, kind: 'normal' })
     visitor(call.expression)
 
     if (op[op.length - 1] === OpCode.PropAccess) {
@@ -599,7 +627,7 @@ export function gen(code: string): [(OpCode | OpValue)[], ConstantValue[]] {
     const context = lexerContext.pop()!
     context.upValue.forEach(u => pushConst(u))
     op.push(OpCode.Push)
-    op.push({ value: context.upValue.size })
+    op.push({ value: context.upValue.size, kind: 'normal' })
 
     op.push(OpCode.Push)
     op.push(label1)
@@ -654,7 +682,7 @@ export function gen(code: string): [(OpCode | OpValue)[], ConstantValue[]] {
     const context = lexerContext.pop()!
     context.upValue.forEach(u => pushConst(u))
     op.push(OpCode.Push)
-    op.push({ value: context.upValue.size })
+    op.push({ value: context.upValue.size, kind: 'normal' })
 
     op.push(OpCode.Push)
     op.push(label1)
@@ -671,6 +699,12 @@ export function gen(code: string): [(OpCode | OpValue)[], ConstantValue[]] {
     } else {
       pushConst(func.getText())
       op.push(OpCode.CreateLambda)
+    }
+
+    if (hasExportKeyword(func)) {
+      op.push(OpCode.Dup)
+      pushConst(filepath)
+      op.push(OpCode.ExportKeyword)
     }
   }
 
@@ -698,14 +732,23 @@ export function gen(code: string): [(OpCode | OpValue)[], ConstantValue[]] {
     op.push(OpCode.Load)
 
     if (lexerContext.length) {
+      const isOutOfFunction = (node: ts.Node): boolean => {
+        return node.pos < context.func.pos || context.func.pos >= node.end
+      }
       const context = last(lexerContext)
       const symbol = checker.getSymbolAtLocation(id)
-      if (
+      const isDeclarationOutsideOfFunction =
         symbol &&
         symbol.valueDeclaration &&
-        (symbol.valueDeclaration.pos < context.func.pos ||
-          context.func.pos >= symbol.valueDeclaration.end)
-      ) {
+        isOutOfFunction(symbol.valueDeclaration)
+      const isImportedSymbolOutsideOfFunction =
+        symbol &&
+        symbol.declarations &&
+        symbol.declarations.length > 0 &&
+        symbol.declarations[0].kind === ts.SyntaxKind.ImportSpecifier &&
+        isOutOfFunction(symbol.declarations[0])
+
+      if (isDeclarationOutsideOfFunction || isImportedSymbolOutsideOfFunction) {
         context.upValue.add(id.text)
       }
     }
@@ -735,7 +778,8 @@ export function gen(code: string): [(OpCode | OpValue)[], ConstantValue[]] {
     }
 
     visitor(variable.initializer)
-    pushConst((variable.name as ts.Identifier).text)
+    const identifier = variable.name as ts.Identifier
+    pushConst(identifier.text)
 
     switch (type) {
       case EnvironmentType.block:
@@ -744,6 +788,13 @@ export function gen(code: string): [(OpCode | OpValue)[], ConstantValue[]] {
       default:
         op.push(OpCode.Def)
         break
+    }
+
+    if (hasExportKeyword(variable.parent.parent)) {
+      visitor(variable.initializer)
+      pushConst(identifier.text)
+      pushConst(filepath)
+      op.push(OpCode.ExportKeyword)
     }
   }
 
@@ -991,7 +1042,7 @@ export function gen(code: string): [(OpCode | OpValue)[], ConstantValue[]] {
     pushConst('')
 
     op.push(OpCode.Push)
-    op.push({ value: 1 })
+    op.push({ value: 1, kind: 'normal' })
 
     pushConst(templateExpression.head.text)
 
@@ -1003,7 +1054,7 @@ export function gen(code: string): [(OpCode | OpValue)[], ConstantValue[]] {
     // one head plus expression and literal for each template expression
     const len = 1 + 2 * templateExpression.templateSpans.length
     op.push(OpCode.CreateArray)
-    op.push({ value: len })
+    op.push({ value: len, kind: 'normal' })
 
     pushConst('join')
 
@@ -1013,5 +1064,124 @@ export function gen(code: string): [(OpCode | OpValue)[], ConstantValue[]] {
   function visitTypeOfExpression(typeOfExpression: ts.TypeOfExpression): void {
     visitor(typeOfExpression.expression)
     op.push(OpCode.TypeOf)
+  }
+
+  function isCyclicImport(node: ImportNode, name: string): boolean {
+    let count = 0
+    while (node.parent !== null) {
+      if (node.name === name) {
+        count += 1
+      }
+      if (count === 2) {
+        return true
+      }
+      node = node.parent
+    }
+    return false
+  }
+
+  function visitImportDeclaration(
+    importDeclaration: ts.ImportDeclaration
+  ): void {
+    const moduleSpecifier = importDeclaration.moduleSpecifier as ts.StringLiteral
+    const importAbsoluteFilepath = getAbsoluteFilepath(
+      filepath,
+      moduleSpecifier.text
+    )
+
+    const isCyclic = isCyclicImport(
+      JSON.parse(JSON.stringify(importNode)),
+      importAbsoluteFilepath
+    )
+
+    if (!isCyclic) {
+      const importFileContent = readFileSync(importAbsoluteFilepath, 'utf-8')
+      const compilerResult = gen(`(function() { ${importFileContent} })()`, {
+        filepath: importAbsoluteFilepath,
+        importNode: { parent: importNode, name: importAbsoluteFilepath }
+      })
+      objectFiles.push(compilerResult)
+    }
+
+    pushConst(isCyclic)
+    pushConst(importAbsoluteFilepath)
+    op.push(OpCode.ModuleSpecifier)
+
+    if (importDeclaration.importClause) {
+      visitor(importDeclaration.importClause)
+    }
+  }
+
+  function visitNamedImports(namedImports: ts.NamedImports): void {
+    namedImports.elements.forEach(visitor)
+  }
+
+  function visitImportSpecifier(importSpecifier: ts.ImportSpecifier): void {
+    let numberOfValues = 1
+    if (importSpecifier.propertyName) {
+      numberOfValues += 1
+      pushConst(importSpecifier.propertyName.text)
+    }
+    pushConst(importSpecifier.name.text)
+    op.push(OpCode.ImportSpecifier)
+    op.push({ value: numberOfValues, kind: 'normal' })
+  }
+
+  function hasExportKeyword(node: ts.Node): boolean {
+    return (
+      node.modifiers !== undefined &&
+      node.modifiers.length > 0 &&
+      node.modifiers[0].kind === ts.SyntaxKind.ExportKeyword
+    )
+  }
+
+  // TODO: Mimic node module resolution strategy algorithm
+  function getAbsoluteFilepath(
+    currentAbsoluteFilepath: string,
+    importedFilepath: string
+  ): string {
+    let importedAbsoluteFilepath = null
+
+    if (path.isAbsolute(importedFilepath)) {
+      importedAbsoluteFilepath = importedFilepath
+    }
+
+    if (importedFilepath.startsWith('.')) {
+      importedAbsoluteFilepath = path.resolve(
+        path.parse(currentAbsoluteFilepath).dir,
+        importedFilepath
+      )
+    }
+
+    if (importedAbsoluteFilepath === null) {
+      throw new Error(
+        `Only absolute and relative imports are supported, but got '${importedFilepath}'`
+      )
+    }
+
+    importedAbsoluteFilepath = getExistingAbsoluteFilepath(
+      importedAbsoluteFilepath
+    )
+    if (importedAbsoluteFilepath === null) {
+      throw new Error(`Can't find ${importedAbsoluteFilepath} module`)
+    }
+
+    return importedAbsoluteFilepath
+  }
+
+  function getExistingAbsoluteFilepath(filepath: string): string | null {
+    if (existsSync(filepath)) {
+      return filepath
+    }
+
+    if (existsSync(filepath + '.ts')) {
+      return filepath + '.ts'
+    }
+
+    if (existsSync(filepath + '.js')) {
+      return filepath + '.js'
+    }
+
+    return null
   }
 }

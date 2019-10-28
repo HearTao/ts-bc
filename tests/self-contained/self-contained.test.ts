@@ -1,35 +1,59 @@
-import { Dirent, readdirSync, readFileSync } from 'fs'
+import { readFileSync } from 'fs'
 
-import VirtualMachine, { gen, isOpCode, OpCode } from '../../src'
+import VirtualMachine, { OpCode, gen, isOpCode } from '../../src'
+import * as path from 'path'
 
 const PRINT_CODES = false
 
-test(`check js code`, () => {
-  const testDir = 'tests/self-contained/'
-  const testcaseDir = `${testDir}testcases/`
+{
+  test('import-deep.js', () => {
+    run('import-deep.js')
+  })
 
-  readdirSync(testcaseDir, { withFileTypes: true }).forEach(
-    (testcase: Dirent) => {
-      if (testcase.isFile()) {
-        const fileContent = readFileSync(
-          `${testcaseDir}/${testcase.name}`,
-          'utf-8'
-        )
-        const [op, value] = gen(fileContent)
+  test('import-cyclic.js', () => {
+    run('import-cyclic.js')
+  })
 
-        if (PRINT_CODES) {
-          console.log(`${testcase.name}: `)
-          console.log(
-            JSON.stringify(op.filter(isOpCode).map(n => OpCode[n]), null, 2)
-          )
-        }
+  test('indexOf.js', () => {
+    run('indexOf.js')
+  })
 
-        const vm = new VirtualMachine(op, value)
+  test('logical-or-and.js', () => {
+    run('logical-or-and.js')
+  })
 
-        vm.exec()
+  test('object-shorthand.js', () => {
+    run('object-shorthand.js')
+  })
 
-        console.log(`${testcase.name} ok`)
-      }
-    }
-  )
-})
+  test('substring.js', () => {
+    run('substring.js')
+  })
+
+  test('switch.js', () => {
+    run('switch.js')
+  })
+
+  test('typeof.js', () => {
+    run('typeof.js')
+  })
+}
+
+function run(testname: string): void {
+  const testcaseDir = 'tests/self-contained/testcases'
+  const testCasePath = `${testcaseDir}/${testname}`
+
+  const fileContent = readFileSync(testCasePath, 'utf-8')
+  const [op, value] = gen(fileContent, { filepath: path.resolve(testCasePath) })
+
+  if (PRINT_CODES) {
+    console.log(`${testname}: `)
+    console.log(
+      JSON.stringify(op.filter(isOpCode).map(x => OpCode[x]), null, 2)
+    )
+  }
+
+  const vm = new VirtualMachine(op, value)
+
+  vm.exec()
+}
