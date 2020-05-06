@@ -738,12 +738,10 @@ export function gen(
       const context = last(lexerContext)
       const symbol = checker.getSymbolAtLocation(id)
       const isDeclarationOutsideOfFunction =
-        symbol &&
-        symbol.valueDeclaration &&
+        symbol?.valueDeclaration &&
         isOutOfFunction(symbol.valueDeclaration)
       const isImportedSymbolOutsideOfFunction =
-        symbol &&
-        symbol.declarations &&
+        symbol?.declarations &&
         symbol.declarations.length > 0 &&
         symbol.declarations[0].kind === ts.SyntaxKind.ImportSpecifier &&
         isOutOfFunction(symbol.declarations[0])
