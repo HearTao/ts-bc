@@ -1166,7 +1166,7 @@ export default class VirtualMachine implements Callable {
       }
       case OpCode.BitwiseXor: {
         this.stack.push(
-          new JSNumber(left.asNumber().value & right.asNumber().value)
+          new JSNumber(left.asNumber().value ^ right.asNumber().value)
         )
         break
       }

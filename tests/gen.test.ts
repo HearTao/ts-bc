@@ -690,3 +690,15 @@ test(`should work with template literal`, () => {
 
   run(code)
 })
+
+test(`should work with xor assignment`, () => {
+  const code = 'let a = 256; a ^= 1; a'
+
+  run(code)
+})
+
+test(`should work with xor expression`, () => {
+  const code = '1 ^ 2 ^ 4 ^ 8 ^ 16 ^ 32 ^ 64 ^ 128'
+
+  run(code)
+})

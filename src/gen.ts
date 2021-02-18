@@ -853,6 +853,9 @@ export function gen(
       case ts.SyntaxKind.AmpersandAmpersandToken:
         op.push(OpCode.LogicalAnd)
         break
+      case ts.SyntaxKind.CaretToken:
+        op.push(OpCode.BitwiseXor)
+        break
       default:
         throw new Error(
           'not supported operator: ' + ts.SyntaxKind[binary.operatorToken.kind]

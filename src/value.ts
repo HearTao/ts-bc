@@ -70,7 +70,7 @@ export abstract class VObject {
     return false
   }
 
-  asNumber() {
+  asNumber(): JSNumber {
     if (this.isNumber()) {
       return this
     }
@@ -78,7 +78,7 @@ export abstract class VObject {
     return new JSNumber(+this)
   }
 
-  asString() {
+  asString(): JSString {
     if (this.isString()) {
       return this
     }
